@@ -1,0 +1,13 @@
+diff --git a/rpcs3/rpcs3qt/emu_settings.cpp b/rpcs3/rpcs3qt/emu_settings.cpp
+index 55c7845a0..6c61581a8 100644
+--- a/rpcs3/rpcs3qt/emu_settings.cpp
++++ b/rpcs3/rpcs3qt/emu_settings.cpp
+@@ -8,6 +8,8 @@
+ #include "Utilities/Config.h"
+ #include "Utilities/Thread.h"
+ #include "Utilities/StrUtil.h"
++#include "Emu/System.h"
++#include "Emu/system_config.h"
+ 
+ #include <QMessageBox>
+ 
