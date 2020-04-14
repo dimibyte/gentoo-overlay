@@ -1,0 +1,5832 @@
+diff --git a/Makefile.in b/Makefile.in
+index 8078139..ebef00c 100644
+--- a/Makefile.in
++++ b/Makefile.in
+@@ -194,7 +194,7 @@ CSCOPE = cscope
+ DIST_SUBDIRS = $(SUBDIRS)
+ am__DIST_COMMON = $(srcdir)/Makefile.in $(srcdir)/config.h.in \
+ 	$(srcdir)/snort.pc.in COPYING ChangeLog compile config.guess \
+-	config.sub install-sh ltmain.sh missing
++	config.sub install-sh ltmain.sh missing ylwrap
+ DISTFILES = $(DIST_COMMON) $(DIST_SOURCES) $(TEXINFOS) $(EXTRA_DIST)
+ distdir = $(PACKAGE)-$(VERSION)
+ top_distdir = $(distdir)
+diff --git a/aclocal.m4 b/aclocal.m4
+index 0829ac6..700eeb3 100644
+--- a/aclocal.m4
++++ b/aclocal.m4
+@@ -1431,10 +1431,10 @@ s390*-*linux*|s390*-*tpf*|sparc*-*linux*)
+ 	  x86_64-*linux*)
+ 	    LD="${LD-ld} -m elf_x86_64"
+ 	    ;;
+-	  powerpcle-*linux*)
++	  powerpcle-*linux*|powerpc64le-*linux*)
+ 	    LD="${LD-ld} -m elf64lppc"
+ 	    ;;
+-	  powerpc-*linux*)
++	  powerpc-*linux*|powerpc64-*linux*)
+ 	    LD="${LD-ld} -m elf64ppc"
+ 	    ;;
+ 	  s390*-*linux*|s390*-*tpf*)
+@@ -1722,6 +1722,11 @@ AC_CACHE_VAL([lt_cv_sys_max_cmd_len], [dnl
+     lt_cv_sys_max_cmd_len=8192;
+     ;;
+ 
++  mint*)
++    # On MiNT this can take a long time and run out of memory.
++    lt_cv_sys_max_cmd_len=8192;
++    ;;
++
+   amigaos*)
+     # On AmigaOS with pdksh, this test takes hours, literally.
+     # So we just punt and use a minimum line length of 8192.
+@@ -2650,11 +2655,11 @@ darwin* | rhapsody*)
+   version_type=darwin
+   need_lib_prefix=no
+   need_version=no
+-  library_names_spec='$libname$release$major$shared_ext $libname$shared_ext'
++  library_names_spec='$libname$release$versuffix$shared_ext $libname$release$major$shared_ext $libname$shared_ext'
+   soname_spec='$libname$release$major$shared_ext'
+   shlibpath_overrides_runpath=yes
+   shlibpath_var=DYLD_LIBRARY_PATH
+-  shrext_cmds='`test .$module = .yes && echo .so || echo .dylib`'
++  shrext_cmds='`test .$module = .yes && echo .bundle || echo .dylib`'
+ m4_if([$1], [],[
+   sys_lib_search_path_spec="$sys_lib_search_path_spec /usr/local/lib"])
+   sys_lib_dlsearch_path_spec='/usr/local/lib /lib /usr/lib'
+@@ -2680,7 +2685,14 @@ freebsd* | dragonfly*)
+     *) objformat=elf ;;
+     esac
+   fi
+-  version_type=freebsd-$objformat
++  # Handle Gentoo/FreeBSD as it was Linux
++  case $host_vendor in
++    gentoo)
++      version_type=linux ;;
++    *)
++      version_type=freebsd-$objformat ;;
++  esac
++
+   case $version_type in
+     freebsd-elf*)
+       library_names_spec='$libname$release$shared_ext$versuffix $libname$release$shared_ext$major $libname$shared_ext'
+@@ -2692,6 +2704,12 @@ freebsd* | dragonfly*)
+       library_names_spec='$libname$release$shared_ext$versuffix $libname$shared_ext$versuffix'
+       need_version=yes
+       ;;
++    linux)
++      library_names_spec='${libname}${release}${shared_ext}$versuffix ${libname}${release}${shared_ext}$major ${libname}${shared_ext}'
++      soname_spec='${libname}${release}${shared_ext}$major'
++      need_lib_prefix=no
++      need_version=no
++      ;;
+   esac
+   shlibpath_var=LD_LIBRARY_PATH
+   case $host_os in
+@@ -2881,9 +2899,6 @@ linux* | k*bsd*-gnu | kopensolaris*-gnu | gnu*)
+   # before this can be enabled.
+   hardcode_into_libs=yes
+ 
+-  # Add ABI-specific directories to the system library path.
+-  sys_lib_dlsearch_path_spec="/lib64 /usr/lib64 /lib /usr/lib"
+-
+   # Ideally, we could use ldconfig to report *all* directores which are
+   # searched for libraries, however this is still not possible.  Aside from not
+   # being certain /sbin/ldconfig is available, command
+@@ -2892,7 +2907,7 @@ linux* | k*bsd*-gnu | kopensolaris*-gnu | gnu*)
+   # appending ld.so.conf contents (and includes) to the search path.
+   if test -f /etc/ld.so.conf; then
+     lt_ld_extra=`awk '/^include / { system(sprintf("cd /etc; cat %s 2>/dev/null", \[$]2)); skip = 1; } { if (!skip) print \[$]0; skip = 0; }' < /etc/ld.so.conf | $SED -e 's/#.*//;/^[	 ]*hwcap[	 ]/d;s/[:,	]/ /g;s/=[^=]*$//;s/=[^= ]* / /g;s/"//g;/^$/d' | tr '\n' ' '`
+-    sys_lib_dlsearch_path_spec="$sys_lib_dlsearch_path_spec $lt_ld_extra"
++    sys_lib_dlsearch_path_spec="/lib /usr/lib $lt_ld_extra"
+   fi
+ 
+   # We used to test for /lib/ld.so.1 and disable shared libraries on
+@@ -9053,7 +9068,7 @@ m4_ifndef([_LT_PROG_FC],		[AC_DEFUN([_LT_PROG_FC])])
+ m4_ifndef([_LT_PROG_CXX],		[AC_DEFUN([_LT_PROG_CXX])])
+ 
+ # pkg.m4 - Macros to locate and utilise pkg-config.   -*- Autoconf -*-
+-# serial 11 (pkg-config-0.29.1)
++# serial 12 (pkg-config-0.29.2)
+ 
+ dnl Copyright © 2004 Scott James Remnant <scott@netsplit.com>.
+ dnl Copyright © 2012-2015 Dan Nicholson <dbn.lists@gmail.com>
+@@ -9095,7 +9110,7 @@ dnl
+ dnl See the "Since" comment for each macro you use to see what version
+ dnl of the macros you require.
+ m4_defun([PKG_PREREQ],
+-[m4_define([PKG_MACROS_VERSION], [0.29.1])
++[m4_define([PKG_MACROS_VERSION], [0.29.2])
+ m4_if(m4_version_compare(PKG_MACROS_VERSION, [$1]), -1,
+     [m4_fatal([pkg.m4 version $1 or higher is required but ]PKG_MACROS_VERSION[ found])])
+ ])dnl PKG_PREREQ
+@@ -9196,7 +9211,7 @@ AC_ARG_VAR([$1][_CFLAGS], [C compiler flags for $1, overriding pkg-config])dnl
+ AC_ARG_VAR([$1][_LIBS], [linker flags for $1, overriding pkg-config])dnl
+ 
+ pkg_failed=no
+-AC_MSG_CHECKING([for $1])
++AC_MSG_CHECKING([for $2])
+ 
+ _PKG_CONFIG([$1][_CFLAGS], [cflags], [$2])
+ _PKG_CONFIG([$1][_LIBS], [libs], [$2])
+@@ -9206,11 +9221,11 @@ and $1[]_LIBS to avoid the need to call pkg-config.
+ See the pkg-config man page for more details.])
+ 
+ if test $pkg_failed = yes; then
+-   	AC_MSG_RESULT([no])
++        AC_MSG_RESULT([no])
+         _PKG_SHORT_ERRORS_SUPPORTED
+         if test $_pkg_short_errors_supported = yes; then
+ 	        $1[]_PKG_ERRORS=`$PKG_CONFIG --short-errors --print-errors --cflags --libs "$2" 2>&1`
+-        else 
++        else
+ 	        $1[]_PKG_ERRORS=`$PKG_CONFIG --print-errors --cflags --libs "$2" 2>&1`
+         fi
+ 	# Put the nasty error message in config.log where it belongs
+@@ -9227,7 +9242,7 @@ installed software in a non-standard prefix.
+ _PKG_TEXT])[]dnl
+         ])
+ elif test $pkg_failed = untried; then
+-     	AC_MSG_RESULT([no])
++        AC_MSG_RESULT([no])
+ 	m4_default([$4], [AC_MSG_FAILURE(
+ [The pkg-config script could not be found or is too old.  Make sure it
+ is in your PATH or set the PKG_CONFIG environment variable to the full
+@@ -9328,74 +9343,6 @@ AS_VAR_COPY([$1], [pkg_cv_][$1])
+ AS_VAR_IF([$1], [""], [$5], [$4])dnl
+ ])dnl PKG_CHECK_VAR
+ 
+-dnl PKG_WITH_MODULES(VARIABLE-PREFIX, MODULES,
+-dnl   [ACTION-IF-FOUND],[ACTION-IF-NOT-FOUND],
+-dnl   [DESCRIPTION], [DEFAULT])
+-dnl ------------------------------------------
+-dnl
+-dnl Prepare a "--with-" configure option using the lowercase
+-dnl [VARIABLE-PREFIX] name, merging the behaviour of AC_ARG_WITH and
+-dnl PKG_CHECK_MODULES in a single macro.
+-AC_DEFUN([PKG_WITH_MODULES],
+-[
+-m4_pushdef([with_arg], m4_tolower([$1]))
+-
+-m4_pushdef([description],
+-           [m4_default([$5], [build with ]with_arg[ support])])
+-
+-m4_pushdef([def_arg], [m4_default([$6], [auto])])
+-m4_pushdef([def_action_if_found], [AS_TR_SH([with_]with_arg)=yes])
+-m4_pushdef([def_action_if_not_found], [AS_TR_SH([with_]with_arg)=no])
+-
+-m4_case(def_arg,
+-            [yes],[m4_pushdef([with_without], [--without-]with_arg)],
+-            [m4_pushdef([with_without],[--with-]with_arg)])
+-
+-AC_ARG_WITH(with_arg,
+-     AS_HELP_STRING(with_without, description[ @<:@default=]def_arg[@:>@]),,
+-    [AS_TR_SH([with_]with_arg)=def_arg])
+-
+-AS_CASE([$AS_TR_SH([with_]with_arg)],
+-            [yes],[PKG_CHECK_MODULES([$1],[$2],$3,$4)],
+-            [auto],[PKG_CHECK_MODULES([$1],[$2],
+-                                        [m4_n([def_action_if_found]) $3],
+-                                        [m4_n([def_action_if_not_found]) $4])])
+-
+-m4_popdef([with_arg])
+-m4_popdef([description])
+-m4_popdef([def_arg])
+-
+-])dnl PKG_WITH_MODULES
+-
+-dnl PKG_HAVE_WITH_MODULES(VARIABLE-PREFIX, MODULES,
+-dnl   [DESCRIPTION], [DEFAULT])
+-dnl -----------------------------------------------
+-dnl
+-dnl Convenience macro to trigger AM_CONDITIONAL after PKG_WITH_MODULES
+-dnl check._[VARIABLE-PREFIX] is exported as make variable.
+-AC_DEFUN([PKG_HAVE_WITH_MODULES],
+-[
+-PKG_WITH_MODULES([$1],[$2],,,[$3],[$4])
+-
+-AM_CONDITIONAL([HAVE_][$1],
+-               [test "$AS_TR_SH([with_]m4_tolower([$1]))" = "yes"])
+-])dnl PKG_HAVE_WITH_MODULES
+-
+-dnl PKG_HAVE_DEFINE_WITH_MODULES(VARIABLE-PREFIX, MODULES,
+-dnl   [DESCRIPTION], [DEFAULT])
+-dnl ------------------------------------------------------
+-dnl
+-dnl Convenience macro to run AM_CONDITIONAL and AC_DEFINE after
+-dnl PKG_WITH_MODULES check. HAVE_[VARIABLE-PREFIX] is exported as make
+-dnl and preprocessor variable.
+-AC_DEFUN([PKG_HAVE_DEFINE_WITH_MODULES],
+-[
+-PKG_HAVE_WITH_MODULES([$1],[$2],[$3],[$4])
+-
+-AS_IF([test "$AS_TR_SH([with_]m4_tolower([$1]))" = "yes"],
+-        [AC_DEFINE([HAVE_][$1], 1, [Enable ]m4_tolower([$1])[ support])])
+-])dnl PKG_HAVE_DEFINE_WITH_MODULES
+-
+ # Copyright (C) 2002-2018 Free Software Foundation, Inc.
+ #
+ # This file is free software; the Free Software Foundation
+diff --git a/config.guess b/config.guess
+index 256083a..df89549 100755
+--- a/config.guess
++++ b/config.guess
+@@ -1,8 +1,8 @@
+ #! /bin/sh
+ # Attempt to guess a canonical system name.
+-#   Copyright 1992-2018 Free Software Foundation, Inc.
++#   Copyright 1992-2019 Free Software Foundation, Inc.
+ 
+-timestamp='2018-03-08'
++timestamp='2019-09-10'
+ 
+ # This file is free software; you can redistribute it and/or modify it
+ # under the terms of the GNU General Public License as published by
+@@ -50,7 +50,7 @@ version="\
+ GNU config.guess ($timestamp)
+ 
+ Originally written by Per Bothner.
+-Copyright 1992-2018 Free Software Foundation, Inc.
++Copyright 1992-2019 Free Software Foundation, Inc.
+ 
+ This is free software; see the source for copying conditions.  There is NO
+ warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE."
+@@ -84,8 +84,6 @@ if test $# != 0; then
+   exit 1
+ fi
+ 
+-trap 'exit 1' 1 2 15
+-
+ # CC_FOR_BUILD -- compiler used by this script. Note that the use of a
+ # compiler to aid in system detection is discouraged as it requires
+ # temporary files to be created and, as you can see below, it is a
+@@ -96,34 +94,38 @@ trap 'exit 1' 1 2 15
+ 
+ # Portable tmp directory creation inspired by the Autoconf team.
+ 
+-set_cc_for_build='
+-trap "exitcode=\$?; (rm -f \$tmpfiles 2>/dev/null; rmdir \$tmp 2>/dev/null) && exit \$exitcode" 0 ;
+-trap "rm -f \$tmpfiles 2>/dev/null; rmdir \$tmp 2>/dev/null; exit 1" 1 2 13 15 ;
+-: ${TMPDIR=/tmp} ;
+- { tmp=`(umask 077 && mktemp -d "$TMPDIR/cgXXXXXX") 2>/dev/null` && test -n "$tmp" && test -d "$tmp" ; } ||
+- { test -n "$RANDOM" && tmp=$TMPDIR/cg$$-$RANDOM && (umask 077 && mkdir $tmp) ; } ||
+- { tmp=$TMPDIR/cg-$$ && (umask 077 && mkdir $tmp) && echo "Warning: creating insecure temp directory" >&2 ; } ||
+- { echo "$me: cannot create a temporary directory in $TMPDIR" >&2 ; exit 1 ; } ;
+-dummy=$tmp/dummy ;
+-tmpfiles="$dummy.c $dummy.o $dummy.rel $dummy" ;
+-case $CC_FOR_BUILD,$HOST_CC,$CC in
+- ,,)    echo "int x;" > "$dummy.c" ;
+-	for c in cc gcc c89 c99 ; do
+-	  if ($c -c -o "$dummy.o" "$dummy.c") >/dev/null 2>&1 ; then
+-	     CC_FOR_BUILD="$c"; break ;
+-	  fi ;
+-	done ;
+-	if test x"$CC_FOR_BUILD" = x ; then
+-	  CC_FOR_BUILD=no_compiler_found ;
+-	fi
+-	;;
+- ,,*)   CC_FOR_BUILD=$CC ;;
+- ,*,*)  CC_FOR_BUILD=$HOST_CC ;;
+-esac ; set_cc_for_build= ;'
++tmp=
++# shellcheck disable=SC2172
++trap 'test -z "$tmp" || rm -fr "$tmp"' 0 1 2 13 15
++
++set_cc_for_build() {
++    : "${TMPDIR=/tmp}"
++    # shellcheck disable=SC2039
++    { tmp=`(umask 077 && mktemp -d "$TMPDIR/cgXXXXXX") 2>/dev/null` && test -n "$tmp" && test -d "$tmp" ; } ||
++	{ test -n "$RANDOM" && tmp=$TMPDIR/cg$$-$RANDOM && (umask 077 && mkdir "$tmp" 2>/dev/null) ; } ||
++	{ tmp=$TMPDIR/cg-$$ && (umask 077 && mkdir "$tmp" 2>/dev/null) && echo "Warning: creating insecure temp directory" >&2 ; } ||
++	{ echo "$me: cannot create a temporary directory in $TMPDIR" >&2 ; exit 1 ; }
++    dummy=$tmp/dummy
++    case ${CC_FOR_BUILD-},${HOST_CC-},${CC-} in
++	,,)    echo "int x;" > "$dummy.c"
++	       for driver in cc gcc c89 c99 ; do
++		   if ($driver -c -o "$dummy.o" "$dummy.c") >/dev/null 2>&1 ; then
++		       CC_FOR_BUILD="$driver"
++		       break
++		   fi
++	       done
++	       if test x"$CC_FOR_BUILD" = x ; then
++		   CC_FOR_BUILD=no_compiler_found
++	       fi
++	       ;;
++	,,*)   CC_FOR_BUILD=$CC ;;
++	,*,*)  CC_FOR_BUILD=$HOST_CC ;;
++    esac
++}
+ 
+ # This is needed to find uname on a Pyramid OSx when run in the BSD universe.
+ # (ghazi@noc.rutgers.edu 1994-08-24)
+-if (test -f /.attbin/uname) >/dev/null 2>&1 ; then
++if test -f /.attbin/uname ; then
+ 	PATH=$PATH:/.attbin ; export PATH
+ fi
+ 
+@@ -138,7 +140,7 @@ Linux|GNU|GNU/*)
+ 	# We could probably try harder.
+ 	LIBC=gnu
+ 
+-	eval "$set_cc_for_build"
++	set_cc_for_build
+ 	cat <<-EOF > "$dummy.c"
+ 	#include <features.h>
+ 	#if defined(__UCLIBC__)
+@@ -199,7 +201,7 @@ case "$UNAME_MACHINE:$UNAME_SYSTEM:$UNAME_RELEASE:$UNAME_VERSION" in
+ 		os=netbsdelf
+ 		;;
+ 	    arm*|i386|m68k|ns32k|sh3*|sparc|vax)
+-		eval "$set_cc_for_build"
++		set_cc_for_build
+ 		if echo __ELF__ | $CC_FOR_BUILD -E - 2>/dev/null \
+ 			| grep -q __ELF__
+ 		then
+@@ -237,7 +239,7 @@ case "$UNAME_MACHINE:$UNAME_SYSTEM:$UNAME_RELEASE:$UNAME_VERSION" in
+ 	# Since CPU_TYPE-MANUFACTURER-KERNEL-OPERATING_SYSTEM:
+ 	# contains redundant information, the shorter form:
+ 	# CPU_TYPE-MANUFACTURER-OPERATING_SYSTEM is used.
+-	echo "$machine-${os}${release}${abi}"
++	echo "$machine-${os}${release}${abi-}"
+ 	exit ;;
+     *:Bitrig:*:*)
+ 	UNAME_MACHINE_ARCH=`arch | sed 's/Bitrig.//'`
+@@ -260,6 +262,9 @@ case "$UNAME_MACHINE:$UNAME_SYSTEM:$UNAME_RELEASE:$UNAME_VERSION" in
+     *:SolidBSD:*:*)
+ 	echo "$UNAME_MACHINE"-unknown-solidbsd"$UNAME_RELEASE"
+ 	exit ;;
++    *:OS108:*:*)
++	echo "$UNAME_MACHINE"-unknown-os108_"$UNAME_RELEASE"
++	exit ;;
+     macppc:MirBSD:*:*)
+ 	echo powerpc-unknown-mirbsd"$UNAME_RELEASE"
+ 	exit ;;
+@@ -269,12 +274,15 @@ case "$UNAME_MACHINE:$UNAME_SYSTEM:$UNAME_RELEASE:$UNAME_VERSION" in
+     *:Sortix:*:*)
+ 	echo "$UNAME_MACHINE"-unknown-sortix
+ 	exit ;;
++    *:Twizzler:*:*)
++	echo "$UNAME_MACHINE"-unknown-twizzler
++	exit ;;
+     *:Redox:*:*)
+ 	echo "$UNAME_MACHINE"-unknown-redox
+ 	exit ;;
+     mips:OSF1:*.*)
+-        echo mips-dec-osf1
+-        exit ;;
++	echo mips-dec-osf1
++	exit ;;
+     alpha:OSF1:*:*)
+ 	case $UNAME_RELEASE in
+ 	*4.0)
+@@ -389,7 +397,7 @@ case "$UNAME_MACHINE:$UNAME_SYSTEM:$UNAME_RELEASE:$UNAME_VERSION" in
+ 	echo i386-pc-auroraux"$UNAME_RELEASE"
+ 	exit ;;
+     i86pc:SunOS:5.*:* | i86xen:SunOS:5.*:*)
+-	eval "$set_cc_for_build"
++	set_cc_for_build
+ 	SUN_ARCH=i386
+ 	# If there is a compiler, see if it is configured for 64-bit objects.
+ 	# Note that the Sun cc does not turn __LP64__ into 1 like gcc does.
+@@ -482,7 +490,7 @@ case "$UNAME_MACHINE:$UNAME_SYSTEM:$UNAME_RELEASE:$UNAME_VERSION" in
+ 	echo clipper-intergraph-clix"$UNAME_RELEASE"
+ 	exit ;;
+     mips:*:*:UMIPS | mips:*:*:RISCos)
+-	eval "$set_cc_for_build"
++	set_cc_for_build
+ 	sed 's/^	//' << EOF > "$dummy.c"
+ #ifdef __cplusplus
+ #include <stdio.h>  /* for printf() prototype */
+@@ -579,7 +587,7 @@ EOF
+ 	exit ;;
+     *:AIX:2:3)
+ 	if grep bos325 /usr/include/stdio.h >/dev/null 2>&1; then
+-		eval "$set_cc_for_build"
++		set_cc_for_build
+ 		sed 's/^		//' << EOF > "$dummy.c"
+ 		#include <sys/systemcfg.h>
+ 
+@@ -660,7 +668,7 @@ EOF
+ 		    esac
+ 		fi
+ 		if [ "$HP_ARCH" = "" ]; then
+-		    eval "$set_cc_for_build"
++		    set_cc_for_build
+ 		    sed 's/^		//' << EOF > "$dummy.c"
+ 
+ 		#define _HPUX_SOURCE
+@@ -700,7 +708,7 @@ EOF
+ 	esac
+ 	if [ "$HP_ARCH" = hppa2.0w ]
+ 	then
+-	    eval "$set_cc_for_build"
++	    set_cc_for_build
+ 
+ 	    # hppa2.0w-hp-hpux* has a 64-bit kernel and a compiler generating
+ 	    # 32-bit code.  hppa64-hp-hpux* has the same kernel and a compiler
+@@ -726,7 +734,7 @@ EOF
+ 	echo ia64-hp-hpux"$HPUX_REV"
+ 	exit ;;
+     3050*:HI-UX:*:*)
+-	eval "$set_cc_for_build"
++	set_cc_for_build
+ 	sed 's/^	//' << EOF > "$dummy.c"
+ 	#include <unistd.h>
+ 	int
+@@ -840,6 +848,17 @@ EOF
+     *:BSD/OS:*:*)
+ 	echo "$UNAME_MACHINE"-unknown-bsdi"$UNAME_RELEASE"
+ 	exit ;;
++    arm:FreeBSD:*:*)
++	UNAME_PROCESSOR=`uname -p`
++	set_cc_for_build
++	if echo __ARM_PCS_VFP | $CC_FOR_BUILD -E - 2>/dev/null \
++	    | grep -q __ARM_PCS_VFP
++	then
++	    echo "${UNAME_PROCESSOR}"-unknown-freebsd"`echo ${UNAME_RELEASE}|sed -e 's/[-(].*//'`"-gnueabi
++	else
++	    echo "${UNAME_PROCESSOR}"-unknown-freebsd"`echo ${UNAME_RELEASE}|sed -e 's/[-(].*//'`"-gnueabihf
++	fi
++	exit ;;
+     *:FreeBSD:*:*)
+ 	UNAME_PROCESSOR=`/usr/bin/uname -p`
+ 	case "$UNAME_PROCESSOR" in
+@@ -881,7 +900,7 @@ EOF
+ 	echo "$UNAME_MACHINE"-pc-uwin
+ 	exit ;;
+     amd64:CYGWIN*:*:* | x86_64:CYGWIN*:*:*)
+-	echo x86_64-unknown-cygwin
++	echo x86_64-pc-cygwin
+ 	exit ;;
+     prep*:SunOS:5.*:*)
+ 	echo powerpcle-unknown-solaris2"`echo "$UNAME_RELEASE"|sed -e 's/[^.]*//'`"
+@@ -894,8 +913,8 @@ EOF
+ 	# other systems with GNU libc and userland
+ 	echo "$UNAME_MACHINE-unknown-`echo "$UNAME_SYSTEM" | sed 's,^[^/]*/,,' | tr "[:upper:]" "[:lower:]"``echo "$UNAME_RELEASE"|sed -e 's/[-(].*//'`-$LIBC"
+ 	exit ;;
+-    i*86:Minix:*:*)
+-	echo "$UNAME_MACHINE"-pc-minix
++    *:Minix:*:*)
++	echo "$UNAME_MACHINE"-unknown-minix
+ 	exit ;;
+     aarch64:Linux:*:*)
+ 	echo "$UNAME_MACHINE"-unknown-linux-"$LIBC"
+@@ -922,7 +941,7 @@ EOF
+ 	echo "$UNAME_MACHINE"-unknown-linux-"$LIBC"
+ 	exit ;;
+     arm*:Linux:*:*)
+-	eval "$set_cc_for_build"
++	set_cc_for_build
+ 	if echo __ARM_EABI__ | $CC_FOR_BUILD -E - 2>/dev/null \
+ 	    | grep -q __ARM_EABI__
+ 	then
+@@ -971,23 +990,51 @@ EOF
+ 	echo "$UNAME_MACHINE"-unknown-linux-"$LIBC"
+ 	exit ;;
+     mips:Linux:*:* | mips64:Linux:*:*)
+-	eval "$set_cc_for_build"
++	set_cc_for_build
++	IS_GLIBC=0
++	test x"${LIBC}" = xgnu && IS_GLIBC=1
+ 	sed 's/^	//' << EOF > "$dummy.c"
+ 	#undef CPU
+-	#undef ${UNAME_MACHINE}
+-	#undef ${UNAME_MACHINE}el
++	#undef mips
++	#undef mipsel
++	#undef mips64
++	#undef mips64el
++	#if ${IS_GLIBC} && defined(_ABI64)
++	LIBCABI=gnuabi64
++	#else
++	#if ${IS_GLIBC} && defined(_ABIN32)
++	LIBCABI=gnuabin32
++	#else
++	LIBCABI=${LIBC}
++	#endif
++	#endif
++
++	#if ${IS_GLIBC} && defined(__mips64) && defined(__mips_isa_rev) && __mips_isa_rev>=6
++	CPU=mipsisa64r6
++	#else
++	#if ${IS_GLIBC} && !defined(__mips64) && defined(__mips_isa_rev) && __mips_isa_rev>=6
++	CPU=mipsisa32r6
++	#else
++	#if defined(__mips64)
++	CPU=mips64
++	#else
++	CPU=mips
++	#endif
++	#endif
++	#endif
++
+ 	#if defined(__MIPSEL__) || defined(__MIPSEL) || defined(_MIPSEL) || defined(MIPSEL)
+-	CPU=${UNAME_MACHINE}el
++	MIPS_ENDIAN=el
+ 	#else
+ 	#if defined(__MIPSEB__) || defined(__MIPSEB) || defined(_MIPSEB) || defined(MIPSEB)
+-	CPU=${UNAME_MACHINE}
++	MIPS_ENDIAN=
+ 	#else
+-	CPU=
++	MIPS_ENDIAN=
+ 	#endif
+ 	#endif
+ EOF
+-	eval "`$CC_FOR_BUILD -E "$dummy.c" 2>/dev/null | grep '^CPU'`"
+-	test "x$CPU" != x && { echo "$CPU-unknown-linux-$LIBC"; exit; }
++	eval "`$CC_FOR_BUILD -E "$dummy.c" 2>/dev/null | grep '^CPU\|^MIPS_ENDIAN\|^LIBCABI'`"
++	test "x$CPU" != x && { echo "$CPU${MIPS_ENDIAN}-unknown-linux-$LIBCABI"; exit; }
+ 	;;
+     mips64el:Linux:*:*)
+ 	echo "$UNAME_MACHINE"-unknown-linux-"$LIBC"
+@@ -1046,7 +1093,18 @@ EOF
+ 	echo "$UNAME_MACHINE"-dec-linux-"$LIBC"
+ 	exit ;;
+     x86_64:Linux:*:*)
+-	echo "$UNAME_MACHINE"-pc-linux-"$LIBC"
++	set_cc_for_build
++	X86_64_ABI=
++	# If there is a compiler, see if it is configured for 32-bit objects.
++	if [ "$CC_FOR_BUILD" != 'no_compiler_found' ]; then
++	    if (echo '#ifdef __ILP32__'; echo IS_X32; echo '#endif') | \
++		(CCOPTS= $CC_FOR_BUILD -E - 2>/dev/null) | \
++		grep IS_X32 >/dev/null
++	    then
++		X86_64_ABI=x32
++	    fi
++	fi
++	echo "$UNAME_MACHINE"-pc-linux-"$LIBC$X86_64_ABI"
+ 	exit ;;
+     xtensa*:Linux:*:*)
+ 	echo "$UNAME_MACHINE"-unknown-linux-"$LIBC"
+@@ -1100,7 +1158,7 @@ EOF
+ 	    *Pentium)	     UNAME_MACHINE=i586 ;;
+ 	    *Pent*|*Celeron) UNAME_MACHINE=i686 ;;
+ 	esac
+-	echo "$UNAME_MACHINE-unknown-sysv${UNAME_RELEASE}${UNAME_SYSTEM}{$UNAME_VERSION}"
++	echo "$UNAME_MACHINE-unknown-sysv${UNAME_RELEASE}${UNAME_SYSTEM}${UNAME_VERSION}"
+ 	exit ;;
+     i*86:*:3.2:*)
+ 	if test -f /usr/options/cb.name; then
+@@ -1284,38 +1342,39 @@ EOF
+ 	echo "$UNAME_MACHINE"-apple-rhapsody"$UNAME_RELEASE"
+ 	exit ;;
+     *:Darwin:*:*)
+-	UNAME_PROCESSOR=`uname -p` || UNAME_PROCESSOR=unknown
+-	eval "$set_cc_for_build"
+-	if test "$UNAME_PROCESSOR" = unknown ; then
+-	    UNAME_PROCESSOR=powerpc
++	UNAME_PROCESSOR=`uname -p`
++	case $UNAME_PROCESSOR in
++	    unknown) UNAME_PROCESSOR=powerpc ;;
++	esac
++	if command -v xcode-select > /dev/null 2> /dev/null && \
++		! xcode-select --print-path > /dev/null 2> /dev/null ; then
++	    # Avoid executing cc if there is no toolchain installed as
++	    # cc will be a stub that puts up a graphical alert
++	    # prompting the user to install developer tools.
++	    CC_FOR_BUILD=no_compiler_found
++	else
++	    set_cc_for_build
+ 	fi
+-	if test "`echo "$UNAME_RELEASE" | sed -e 's/\..*//'`" -le 10 ; then
+-	    if [ "$CC_FOR_BUILD" != no_compiler_found ]; then
+-		if (echo '#ifdef __LP64__'; echo IS_64BIT_ARCH; echo '#endif') | \
+-		       (CCOPTS="" $CC_FOR_BUILD -E - 2>/dev/null) | \
+-		       grep IS_64BIT_ARCH >/dev/null
+-		then
+-		    case $UNAME_PROCESSOR in
+-			i386) UNAME_PROCESSOR=x86_64 ;;
+-			powerpc) UNAME_PROCESSOR=powerpc64 ;;
+-		    esac
+-		fi
+-		# On 10.4-10.6 one might compile for PowerPC via gcc -arch ppc
+-		if (echo '#ifdef __POWERPC__'; echo IS_PPC; echo '#endif') | \
+-		       (CCOPTS="" $CC_FOR_BUILD -E - 2>/dev/null) | \
+-		       grep IS_PPC >/dev/null
+-		then
+-		    UNAME_PROCESSOR=powerpc
+-		fi
++	if [ "$CC_FOR_BUILD" != no_compiler_found ]; then
++	    if (echo '#ifdef __LP64__'; echo IS_64BIT_ARCH; echo '#endif') | \
++		   (CCOPTS="" $CC_FOR_BUILD -E - 2>/dev/null) | \
++		   grep IS_64BIT_ARCH >/dev/null
++	    then
++		case $UNAME_PROCESSOR in
++		    i386) UNAME_PROCESSOR=x86_64 ;;
++		    powerpc) UNAME_PROCESSOR=powerpc64 ;;
++		esac
++	    fi
++	    # On 10.4-10.6 one might compile for PowerPC via gcc -arch ppc
++	    if (echo '#ifdef __POWERPC__'; echo IS_PPC; echo '#endif') | \
++		   (CCOPTS="" $CC_FOR_BUILD -E - 2>/dev/null) | \
++		   grep IS_PPC >/dev/null
++	    then
++		UNAME_PROCESSOR=powerpc
+ 	    fi
+ 	elif test "$UNAME_PROCESSOR" = i386 ; then
+-	    # Avoid executing cc on OS X 10.9, as it ships with a stub
+-	    # that puts up a graphical alert prompting to install
+-	    # developer tools.  Any system running Mac OS X 10.7 or
+-	    # later (Darwin 11 and later) is required to have a 64-bit
+-	    # processor. This is not true of the ARM version of Darwin
+-	    # that Apple uses in portable devices.
+-	    UNAME_PROCESSOR=x86_64
++	    # uname -m returns i386 or x86_64
++	    UNAME_PROCESSOR=$UNAME_MACHINE
+ 	fi
+ 	echo "$UNAME_PROCESSOR"-apple-darwin"$UNAME_RELEASE"
+ 	exit ;;
+@@ -1358,6 +1417,7 @@ EOF
+ 	# "uname -m" is not consistent, so use $cputype instead. 386
+ 	# is converted to i386 for consistency with other x86
+ 	# operating systems.
++	# shellcheck disable=SC2154
+ 	if test "$cputype" = 386; then
+ 	    UNAME_MACHINE=i386
+ 	else
+@@ -1414,8 +1474,148 @@ EOF
+     amd64:Isilon\ OneFS:*:*)
+ 	echo x86_64-unknown-onefs
+ 	exit ;;
++    *:Unleashed:*:*)
++	echo "$UNAME_MACHINE"-unknown-unleashed"$UNAME_RELEASE"
++	exit ;;
+ esac
+ 
++# No uname command or uname output not recognized.
++set_cc_for_build
++cat > "$dummy.c" <<EOF
++#ifdef _SEQUENT_
++#include <sys/types.h>
++#include <sys/utsname.h>
++#endif
++#if defined(ultrix) || defined(_ultrix) || defined(__ultrix) || defined(__ultrix__)
++#if defined (vax) || defined (__vax) || defined (__vax__) || defined(mips) || defined(__mips) || defined(__mips__) || defined(MIPS) || defined(__MIPS__)
++#include <signal.h>
++#if defined(_SIZE_T_) || defined(SIGLOST)
++#include <sys/utsname.h>
++#endif
++#endif
++#endif
++main ()
++{
++#if defined (sony)
++#if defined (MIPSEB)
++  /* BFD wants "bsd" instead of "newsos".  Perhaps BFD should be changed,
++     I don't know....  */
++  printf ("mips-sony-bsd\n"); exit (0);
++#else
++#include <sys/param.h>
++  printf ("m68k-sony-newsos%s\n",
++#ifdef NEWSOS4
++  "4"
++#else
++  ""
++#endif
++  ); exit (0);
++#endif
++#endif
++
++#if defined (NeXT)
++#if !defined (__ARCHITECTURE__)
++#define __ARCHITECTURE__ "m68k"
++#endif
++  int version;
++  version=`(hostinfo | sed -n 's/.*NeXT Mach \([0-9]*\).*/\1/p') 2>/dev/null`;
++  if (version < 4)
++    printf ("%s-next-nextstep%d\n", __ARCHITECTURE__, version);
++  else
++    printf ("%s-next-openstep%d\n", __ARCHITECTURE__, version);
++  exit (0);
++#endif
++
++#if defined (MULTIMAX) || defined (n16)
++#if defined (UMAXV)
++  printf ("ns32k-encore-sysv\n"); exit (0);
++#else
++#if defined (CMU)
++  printf ("ns32k-encore-mach\n"); exit (0);
++#else
++  printf ("ns32k-encore-bsd\n"); exit (0);
++#endif
++#endif
++#endif
++
++#if defined (__386BSD__)
++  printf ("i386-pc-bsd\n"); exit (0);
++#endif
++
++#if defined (sequent)
++#if defined (i386)
++  printf ("i386-sequent-dynix\n"); exit (0);
++#endif
++#if defined (ns32000)
++  printf ("ns32k-sequent-dynix\n"); exit (0);
++#endif
++#endif
++
++#if defined (_SEQUENT_)
++  struct utsname un;
++
++  uname(&un);
++  if (strncmp(un.version, "V2", 2) == 0) {
++    printf ("i386-sequent-ptx2\n"); exit (0);
++  }
++  if (strncmp(un.version, "V1", 2) == 0) { /* XXX is V1 correct? */
++    printf ("i386-sequent-ptx1\n"); exit (0);
++  }
++  printf ("i386-sequent-ptx\n"); exit (0);
++#endif
++
++#if defined (vax)
++#if !defined (ultrix)
++#include <sys/param.h>
++#if defined (BSD)
++#if BSD == 43
++  printf ("vax-dec-bsd4.3\n"); exit (0);
++#else
++#if BSD == 199006
++  printf ("vax-dec-bsd4.3reno\n"); exit (0);
++#else
++  printf ("vax-dec-bsd\n"); exit (0);
++#endif
++#endif
++#else
++  printf ("vax-dec-bsd\n"); exit (0);
++#endif
++#else
++#if defined(_SIZE_T_) || defined(SIGLOST)
++  struct utsname un;
++  uname (&un);
++  printf ("vax-dec-ultrix%s\n", un.release); exit (0);
++#else
++  printf ("vax-dec-ultrix\n"); exit (0);
++#endif
++#endif
++#endif
++#if defined(ultrix) || defined(_ultrix) || defined(__ultrix) || defined(__ultrix__)
++#if defined(mips) || defined(__mips) || defined(__mips__) || defined(MIPS) || defined(__MIPS__)
++#if defined(_SIZE_T_) || defined(SIGLOST)
++  struct utsname *un;
++  uname (&un);
++  printf ("mips-dec-ultrix%s\n", un.release); exit (0);
++#else
++  printf ("mips-dec-ultrix\n"); exit (0);
++#endif
++#endif
++#endif
++
++#if defined (alliant) && defined (i860)
++  printf ("i860-alliant-bsd\n"); exit (0);
++#endif
++
++  exit (1);
++}
++EOF
++
++$CC_FOR_BUILD -o "$dummy" "$dummy.c" 2>/dev/null && SYSTEM_NAME=`$dummy` &&
++	{ echo "$SYSTEM_NAME"; exit; }
++
++# Apollos put the system type in the environment.
++test -d /usr/apollo && { echo "$ISP-apollo-$SYSTYPE"; exit; }
++
+ echo "$0: unable to guess system type" >&2
+ 
+ case "$UNAME_MACHINE:$UNAME_SYSTEM" in
+diff --git a/config.sub b/config.sub
+index 20f7cf2..96fca06 100755
+--- a/config.sub
++++ b/config.sub
+@@ -1,8 +1,8 @@
+ #! /bin/sh
+ # Configuration validation subroutine script.
+-#   Copyright 1992-2018 Free Software Foundation, Inc.
++#   Copyright 1992-2019 Free Software Foundation, Inc.
+ 
+-timestamp='2018-05-05'
++timestamp='2019-06-30'
+ 
+ # This file is free software; you can redistribute it and/or modify it
+ # under the terms of the GNU General Public License as published by
+@@ -67,7 +67,7 @@ Report bugs and patches to <config-patches@gnu.org>."
+ version="\
+ GNU config.sub ($timestamp)
+ 
+-Copyright 1992-2018 Free Software Foundation, Inc.
++Copyright 1992-2019 Free Software Foundation, Inc.
+ 
+ This is free software; see the source for copying conditions.  There is NO
+ warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE."
+@@ -89,7 +89,7 @@ while test $# -gt 0 ; do
+     - )	# Use stdin as input.
+        break ;;
+     -* )
+-       echo "$me: invalid option $1$help"
++       echo "$me: invalid option $1$help" >&2
+        exit 1 ;;
+ 
+     *local*)
+@@ -110,16 +110,21 @@ case $# in
+     exit 1;;
+ esac
+ 
+-# Spilt fields of configuration type
+-IFS="-" read -r field1 field2 field3 field4 <<EOF
++# Split fields of configuration type
++# shellcheck disable=SC2162
++IFS="-" read field1 field2 field3 field4 <<EOF
+ $1
+ EOF
+ 
+ # Separate into logical components for further validation
+ case $1 in
++	*-*-*-*-*)
++		echo Invalid configuration \`"$1"\': more than four components >&2
++		exit 1
++		;;
+ 	*-*-*-*)
+ 		basic_machine=$field1-$field2
+-		os=-$field3-$field4
++		os=$field3-$field4
+ 		;;
+ 	*-*-*)
+ 		# Ambiguous whether COMPANY is present, or skipped and KERNEL-OS is two
+@@ -132,1227 +137,1158 @@ case $1 in
+ 			| netbsd*-eabi* | kopensolaris*-gnu* | cloudabi*-eabi* \
+ 			| storm-chaos* | os2-emx* | rtmk-nova*)
+ 				basic_machine=$field1
+-				os=-$maybe_os
++				os=$maybe_os
+ 				;;
+ 			android-linux)
+ 				basic_machine=$field1-unknown
+-				os=-linux-android
++				os=linux-android
+ 				;;
+ 			*)
+ 				basic_machine=$field1-$field2
+-				os=-$field3
++				os=$field3
+ 				;;
+ 		esac
+ 		;;
+ 	*-*)
+-		basic_machine=$field1
+-		os=-$field2
++		# A lone config we happen to match not fitting any pattern
++		case $field1-$field2 in
++			decstation-3100)
++				basic_machine=mips-dec
++				os=
++				;;
++			*-*)
++				# Second component is usually, but not always the OS
++				case $field2 in
++					# Prevent following clause from handling this valid os
++					sun*os*)
++						basic_machine=$field1
++						os=$field2
++						;;
++					# Manufacturers
++					dec* | mips* | sequent* | encore* | pc533* | sgi* | sony* \
++					| att* | 7300* | 3300* | delta* | motorola* | sun[234]* \
++					| unicom* | ibm* | next | hp | isi* | apollo | altos* \
++					| convergent* | ncr* | news | 32* | 3600* | 3100* \
++					| hitachi* | c[123]* | convex* | sun | crds | omron* | dg \
++					| ultra | tti* | harris | dolphin | highlevel | gould \
++					| cbm | ns | masscomp | apple | axis | knuth | cray \
++					| microblaze* | sim | cisco \
++					| oki | wec | wrs | winbond)
++						basic_machine=$field1-$field2
++						os=
++						;;
++					*)
++						basic_machine=$field1
++						os=$field2
++						;;
++				esac
++			;;
++		esac
+ 		;;
+ 	*)
+-		basic_machine=$1
+-		os=
+-		;;
+-esac
+-
+-### Let's recognize common machines as not being operating systems so
+-### that things like config.sub decstation-3100 work.  We also
+-### recognize some manufacturers as not being operating systems, so we
+-### can provide default operating systems below.
+-case $os in
+-	-sun*os*)
+-		# Prevent following clause from handling this invalid input.
+-		;;
+-	-dec* | -mips* | -sequent* | -encore* | -pc532* | -sgi* | -sony* | \
+-	-att* | -7300* | -3300* | -delta* | -motorola* | -sun[234]* | \
+-	-unicom* | -ibm* | -next | -hp | -isi* | -apollo | -altos* | \
+-	-convergent* | -ncr* | -news | -32* | -3600* | -3100* | -hitachi* |\
+-	-c[123]* | -convex* | -sun | -crds | -omron* | -dg | -ultra | -tti* | \
+-	-harris | -dolphin | -highlevel | -gould | -cbm | -ns | -masscomp | \
+-	-apple | -axis | -knuth | -cray | -microblaze*)
+-		os=
+-		basic_machine=$1
+-		;;
+-	-bluegene*)
+-		os=-cnk
+-		;;
+-	-sim | -cisco | -oki | -wec | -winbond)
+-		os=
+-		basic_machine=$1
+-		;;
+-	-scout)
+-		;;
+-	-wrs)
+-		os=-vxworks
+-		basic_machine=$1
+-		;;
+-	-chorusos*)
+-		os=-chorusos
+-		basic_machine=$1
+-		;;
+-	-chorusrdb)
+-		os=-chorusrdb
+-		basic_machine=$1
+-		;;
+-	-hiux*)
+-		os=-hiuxwe2
+-		;;
+-	-sco6)
+-		os=-sco5v6
+-		basic_machine=`echo "$1" | sed -e 's/86-.*/86-pc/'`
+-		;;
+-	-sco5)
+-		os=-sco3.2v5
+-		basic_machine=`echo "$1" | sed -e 's/86-.*/86-pc/'`
+-		;;
+-	-sco4)
+-		os=-sco3.2v4
+-		basic_machine=`echo "$1" | sed -e 's/86-.*/86-pc/'`
+-		;;
+-	-sco3.2.[4-9]*)
+-		os=`echo $os | sed -e 's/sco3.2./sco3.2v/'`
+-		basic_machine=`echo "$1" | sed -e 's/86-.*/86-pc/'`
+-		;;
+-	-sco3.2v[4-9]*)
+-		# Don't forget version if it is 3.2v4 or newer.
+-		basic_machine=`echo "$1" | sed -e 's/86-.*/86-pc/'`
+-		;;
+-	-sco5v6*)
+-		# Don't forget version if it is 3.2v4 or newer.
+-		basic_machine=`echo "$1" | sed -e 's/86-.*/86-pc/'`
+-		;;
+-	-sco*)
+-		os=-sco3.2v2
+-		basic_machine=`echo "$1" | sed -e 's/86-.*/86-pc/'`
+-		;;
+-	-udk*)
+-		basic_machine=`echo "$1" | sed -e 's/86-.*/86-pc/'`
+-		;;
+-	-isc)
+-		os=-isc2.2
+-		basic_machine=`echo "$1" | sed -e 's/86-.*/86-pc/'`
+-		;;
+-	-clix*)
+-		basic_machine=clipper-intergraph
+-		;;
+-	-isc*)
+-		basic_machine=`echo "$1" | sed -e 's/86-.*/86-pc/'`
+-		;;
+-	-lynx*178)
+-		os=-lynxos178
+-		;;
+-	-lynx*5)
+-		os=-lynxos5
+-		;;
+-	-lynx*)
+-		os=-lynxos
+-		;;
+-	-ptx*)
+-		basic_machine=`echo "$1" | sed -e 's/86-.*/86-sequent/'`
+-		;;
+-	-psos*)
+-		os=-psos
+-		;;
+-	-mint | -mint[0-9]*)
+-		basic_machine=m68k-atari
+-		os=-mint
++		# Convert single-component short-hands not valid as part of
++		# multi-component configurations.
++		case $field1 in
++			386bsd)
++				basic_machine=i386-pc
++				os=bsd
++				;;
++			a29khif)
++				basic_machine=a29k-amd
++				os=udi
++				;;
++			adobe68k)
++				basic_machine=m68010-adobe
++				os=scout
++				;;
++			alliant)
++				basic_machine=fx80-alliant
++				os=
++				;;
++			altos | altos3068)
++				basic_machine=m68k-altos
++				os=
++				;;
++			am29k)
++				basic_machine=a29k-none
++				os=bsd
++				;;
++			amdahl)
++				basic_machine=580-amdahl
++				os=sysv
++				;;
++			amiga)
++				basic_machine=m68k-unknown
++				os=
++				;;
++			amigaos | amigados)
++				basic_machine=m68k-unknown
++				os=amigaos
++				;;
++			amigaunix | amix)
++				basic_machine=m68k-unknown
++				os=sysv4
++				;;
++			apollo68)
++				basic_machine=m68k-apollo
++				os=sysv
++				;;
++			apollo68bsd)
++				basic_machine=m68k-apollo
++				os=bsd
++				;;
++			aros)
++				basic_machine=i386-pc
++				os=aros
++				;;
++			aux)
++				basic_machine=m68k-apple
++				os=aux
++				;;
++			balance)
++				basic_machine=ns32k-sequent
++				os=dynix
++				;;
++			blackfin)
++				basic_machine=bfin-unknown
++				os=linux
++				;;
++			cegcc)
++				basic_machine=arm-unknown
++				os=cegcc
++				;;
++			convex-c1)
++				basic_machine=c1-convex
++				os=bsd
++				;;
++			convex-c2)
++				basic_machine=c2-convex
++				os=bsd
++				;;
++			convex-c32)
++				basic_machine=c32-convex
++				os=bsd
++				;;
++			convex-c34)
++				basic_machine=c34-convex
++				os=bsd
++				;;
++			convex-c38)
++				basic_machine=c38-convex
++				os=bsd
++				;;
++			cray)
++				basic_machine=j90-cray
++				os=unicos
++				;;
++			crds | unos)
++				basic_machine=m68k-crds
++				os=
++				;;
++			da30)
++				basic_machine=m68k-da30
++				os=
++				;;
++			decstation | pmax | pmin | dec3100 | decstatn)
++				basic_machine=mips-dec
++				os=
++				;;
++			delta88)
++				basic_machine=m88k-motorola
++				os=sysv3
++				;;
++			dicos)
++				basic_machine=i686-pc
++				os=dicos
++				;;
++			djgpp)
++				basic_machine=i586-pc
++				os=msdosdjgpp
++				;;
++			ebmon29k)
++				basic_machine=a29k-amd
++				os=ebmon
++				;;
++			es1800 | OSE68k | ose68k | ose | OSE)
++				basic_machine=m68k-ericsson
++				os=ose
++				;;
++			gmicro)
++				basic_machine=tron-gmicro
++				os=sysv
++				;;
++			go32)
++				basic_machine=i386-pc
++				os=go32
++				;;
++			h8300hms)
++				basic_machine=h8300-hitachi
++				os=hms
++				;;
++			h8300xray)
++				basic_machine=h8300-hitachi
++				os=xray
++				;;
++			h8500hms)
++				basic_machine=h8500-hitachi
++				os=hms
++				;;
++			harris)
++				basic_machine=m88k-harris
++				os=sysv3
++				;;
++			hp300 | hp300hpux)
++				basic_machine=m68k-hp
++				os=hpux
++				;;
++			hp300bsd)
++				basic_machine=m68k-hp
++				os=bsd
++				;;
++			hppaosf)
++				basic_machine=hppa1.1-hp
++				os=osf
++				;;
++			hppro)
++				basic_machine=hppa1.1-hp
++				os=proelf
++				;;
++			i386mach)
++				basic_machine=i386-mach
++				os=mach
++				;;
++			isi68 | isi)
++				basic_machine=m68k-isi
++				os=sysv
++				;;
++			m68knommu)
++				basic_machine=m68k-unknown
++				os=linux
++				;;
++			magnum | m3230)
++				basic_machine=mips-mips
++				os=sysv
++				;;
++			merlin)
++				basic_machine=ns32k-utek
++				os=sysv
++				;;
++			mingw64)
++				basic_machine=x86_64-pc
++				os=mingw64
++				;;
++			mingw32)
++				basic_machine=i686-pc
++				os=mingw32
++				;;
++			mingw32ce)
++				basic_machine=arm-unknown
++				os=mingw32ce
++				;;
++			monitor)
++				basic_machine=m68k-rom68k
++				os=coff
++				;;
++			morphos)
++				basic_machine=powerpc-unknown
++				os=morphos
++				;;
++			moxiebox)
++				basic_machine=moxie-unknown
++				os=moxiebox
++				;;
++			msdos)
++				basic_machine=i386-pc
++				os=msdos
++				;;
++			msys)
++				basic_machine=i686-pc
++				os=msys
++				;;
++			mvs)
++				basic_machine=i370-ibm
++				os=mvs
++				;;
++			nacl)
++				basic_machine=le32-unknown
++				os=nacl
++				;;
++			ncr3000)
++				basic_machine=i486-ncr
++				os=sysv4
++				;;
++			netbsd386)
++				basic_machine=i386-pc
++				os=netbsd
++				;;
++			netwinder)
++				basic_machine=armv4l-rebel
++				os=linux
++				;;
++			news | news700 | news800 | news900)
++				basic_machine=m68k-sony
++				os=newsos
++				;;
++			news1000)
++				basic_machine=m68030-sony
++				os=newsos
++				;;
++			necv70)
++				basic_machine=v70-nec
++				os=sysv
++				;;
++			nh3000)
++				basic_machine=m68k-harris
++				os=cxux
++				;;
++			nh[45]000)
++				basic_machine=m88k-harris
++				os=cxux
++				;;
++			nindy960)
++				basic_machine=i960-intel
++				os=nindy
++				;;
++			mon960)
++				basic_machine=i960-intel
++				os=mon960
++				;;
++			nonstopux)
++				basic_machine=mips-compaq
++				os=nonstopux
++				;;
++			os400)
++				basic_machine=powerpc-ibm
++				os=os400
++				;;
++			OSE68000 | ose68000)
++				basic_machine=m68000-ericsson
++				os=ose
++				;;
++			os68k)
++				basic_machine=m68k-none
++				os=os68k
++				;;
++			paragon)
++				basic_machine=i860-intel
++				os=osf
++				;;
++			parisc)
++				basic_machine=hppa-unknown
++				os=linux
++				;;
++			pw32)
++				basic_machine=i586-unknown
++				os=pw32
++				;;
++			rdos | rdos64)
++				basic_machine=x86_64-pc
++				os=rdos
++				;;
++			rdos32)
++				basic_machine=i386-pc
++				os=rdos
++				;;
++			rom68k)
++				basic_machine=m68k-rom68k
++				os=coff
++				;;
++			sa29200)
++				basic_machine=a29k-amd
++				os=udi
++				;;
++			sei)
++				basic_machine=mips-sei
++				os=seiux
++				;;
++			sequent)
++				basic_machine=i386-sequent
++				os=
++				;;
++			sps7)
++				basic_machine=m68k-bull
++				os=sysv2
++				;;
++			st2000)
++				basic_machine=m68k-tandem
++				os=
++				;;
++			stratus)
++				basic_machine=i860-stratus
++				os=sysv4
++				;;
++			sun2)
++				basic_machine=m68000-sun
++				os=
++				;;
++			sun2os3)
++				basic_machine=m68000-sun
++				os=sunos3
++				;;
++			sun2os4)
++				basic_machine=m68000-sun
++				os=sunos4
++				;;
++			sun3)
++				basic_machine=m68k-sun
++				os=
++				;;
++			sun3os3)
++				basic_machine=m68k-sun
++				os=sunos3
++				;;
++			sun3os4)
++				basic_machine=m68k-sun
++				os=sunos4
++				;;
++			sun4)
++				basic_machine=sparc-sun
++				os=
++				;;
++			sun4os3)
++				basic_machine=sparc-sun
++				os=sunos3
++				;;
++			sun4os4)
++				basic_machine=sparc-sun
++				os=sunos4
++				;;
++			sun4sol2)
++				basic_machine=sparc-sun
++				os=solaris2
++				;;
++			sun386 | sun386i | roadrunner)
++				basic_machine=i386-sun
++				os=
++				;;
++			sv1)
++				basic_machine=sv1-cray
++				os=unicos
++				;;
++			symmetry)
++				basic_machine=i386-sequent
++				os=dynix
++				;;
++			t3e)
++				basic_machine=alphaev5-cray
++				os=unicos
++				;;
++			t90)
++				basic_machine=t90-cray
++				os=unicos
++				;;
++			toad1)
++				basic_machine=pdp10-xkl
++				os=tops20
++				;;
++			tpf)
++				basic_machine=s390x-ibm
++				os=tpf
++				;;
++			udi29k)
++				basic_machine=a29k-amd
++				os=udi
++				;;
++			ultra3)
++				basic_machine=a29k-nyu
++				os=sym1
++				;;
++			v810 | necv810)
++				basic_machine=v810-nec
++				os=none
++				;;
++			vaxv)
++				basic_machine=vax-dec
++				os=sysv
++				;;
++			vms)
++				basic_machine=vax-dec
++				os=vms
++				;;
++			vsta)
++				basic_machine=i386-pc
++				os=vsta
++				;;
++			vxworks960)
++				basic_machine=i960-wrs
++				os=vxworks
++				;;
++			vxworks68)
++				basic_machine=m68k-wrs
++				os=vxworks
++				;;
++			vxworks29k)
++				basic_machine=a29k-wrs
++				os=vxworks
++				;;
++			xbox)
++				basic_machine=i686-pc
++				os=mingw32
++				;;
++			ymp)
++				basic_machine=ymp-cray
++				os=unicos
++				;;
++			*)
++				basic_machine=$1
++				os=
++				;;
++		esac
+ 		;;
+ esac
+ 
+-# Decode aliases for certain CPU-COMPANY combinations.
++# Decode 1-component or ad-hoc basic machines
+ case $basic_machine in
+-	# Recognize the basic CPU types without company name.
+-	# Some are omitted here because they have special meanings below.
+-	1750a | 580 \
+-	| a29k \
+-	| aarch64 | aarch64_be \
+-	| alpha | alphaev[4-8] | alphaev56 | alphaev6[78] | alphapca5[67] \
+-	| alpha64 | alpha64ev[4-8] | alpha64ev56 | alpha64ev6[78] | alpha64pca5[67] \
+-	| am33_2.0 \
+-	| arc | arceb \
+-	| arm | arm[bl]e | arme[lb] | armv[2-8] | armv[3-8][lb] | armv6m | armv[78][arm] \
+-	| avr | avr32 \
+-	| ba \
+-	| be32 | be64 \
+-	| bfin \
+-	| c4x | c8051 | clipper | csky \
+-	| d10v | d30v | dlx | dsp16xx \
+-	| e2k | epiphany \
+-	| fido | fr30 | frv | ft32 \
+-	| h8300 | h8500 | hppa | hppa1.[01] | hppa2.0 | hppa2.0[nw] | hppa64 \
+-	| hexagon \
+-	| i370 | i860 | i960 | ia16 | ia64 \
+-	| ip2k | iq2000 \
+-	| k1om \
+-	| le32 | le64 \
+-	| lm32 \
+-	| m32c | m32r | m32rle | m68000 | m68k | m88k \
+-	| maxq | mb | microblaze | microblazeel | mcore | mep | metag \
+-	| mips | mipsbe | mipseb | mipsel | mipsle \
+-	| mips16 \
+-	| mips64 | mips64el \
+-	| mips64octeon | mips64octeonel \
+-	| mips64orion | mips64orionel \
+-	| mips64r5900 | mips64r5900el \
+-	| mips64vr | mips64vrel \
+-	| mips64vr4100 | mips64vr4100el \
+-	| mips64vr4300 | mips64vr4300el \
+-	| mips64vr5000 | mips64vr5000el \
+-	| mips64vr5900 | mips64vr5900el \
+-	| mipsisa32 | mipsisa32el \
+-	| mipsisa32r2 | mipsisa32r2el \
+-	| mipsisa32r6 | mipsisa32r6el \
+-	| mipsisa64 | mipsisa64el \
+-	| mipsisa64r2 | mipsisa64r2el \
+-	| mipsisa64r6 | mipsisa64r6el \
+-	| mipsisa64sb1 | mipsisa64sb1el \
+-	| mipsisa64sr71k | mipsisa64sr71kel \
+-	| mipsr5900 | mipsr5900el \
+-	| mipstx39 | mipstx39el \
+-	| mn10200 | mn10300 \
+-	| moxie \
+-	| mt \
+-	| msp430 \
+-	| nds32 | nds32le | nds32be \
+-	| nfp \
+-	| nios | nios2 | nios2eb | nios2el \
+-	| ns16k | ns32k \
+-	| open8 | or1k | or1knd | or32 \
+-	| pdp10 | pj | pjl \
+-	| powerpc | powerpc64 | powerpc64le | powerpcle \
+-	| pru \
+-	| pyramid \
+-	| riscv32 | riscv64 \
+-	| rl78 | rx \
+-	| score \
+-	| sh | sh[1234] | sh[24]a | sh[24]aeb | sh[23]e | sh[234]eb | sheb | shbe | shle | sh[1234]le | sh3ele \
+-	| sh64 | sh64le \
+-	| sparc | sparc64 | sparc64b | sparc64v | sparc86x | sparclet | sparclite \
+-	| sparcv8 | sparcv9 | sparcv9b | sparcv9v \
+-	| spu \
+-	| tahoe | tic4x | tic54x | tic55x | tic6x | tic80 | tron \
+-	| ubicom32 \
+-	| v850 | v850e | v850e1 | v850e2 | v850es | v850e2v3 \
+-	| visium \
+-	| wasm32 \
+-	| x86 | xc16x | xstormy16 | xtensa \
+-	| z8k | z80)
+-		basic_machine=$basic_machine-unknown
+-		;;
+-	c54x)
+-		basic_machine=tic54x-unknown
+-		;;
+-	c55x)
+-		basic_machine=tic55x-unknown
+-		;;
+-	c6x)
+-		basic_machine=tic6x-unknown
+-		;;
+-	leon|leon[3-9])
+-		basic_machine=sparc-$basic_machine
+-		;;
+-	m6811 | m68hc11 | m6812 | m68hc12 | m68hcs12x | nvptx | picochip)
+-		basic_machine=$basic_machine-unknown
+-		os=-none
++	# Here we handle the default manufacturer of certain CPU types.  It is in
++	# some cases the only manufacturer, in others, it is the most popular.
++	w89k)
++		cpu=hppa1.1
++		vendor=winbond
+ 		;;
+-	m88110 | m680[12346]0 | m683?2 | m68360 | m5200 | v70 | w65)
++	op50n)
++		cpu=hppa1.1
++		vendor=oki
+ 		;;
+-	m9s12z | m68hcs12z | hcs12z | s12z)
+-		basic_machine=s12z-unknown
+-		os=-none
++	op60c)
++		cpu=hppa1.1
++		vendor=oki
+ 		;;
+-	ms1)
+-		basic_machine=mt-unknown
++	ibm*)
++		cpu=i370
++		vendor=ibm
+ 		;;
+-
+-	strongarm | thumb | xscale)
+-		basic_machine=arm-unknown
+-		;;
+-	xgate)
+-		basic_machine=$basic_machine-unknown
+-		os=-none
++	orion105)
++		cpu=clipper
++		vendor=highlevel
+ 		;;
+-	xscaleeb)
+-		basic_machine=armeb-unknown
++	mac | mpw | mac-mpw)
++		cpu=m68k
++		vendor=apple
+ 		;;
+-
+-	xscaleel)
+-		basic_machine=armel-unknown
++	pmac | pmac-mpw)
++		cpu=powerpc
++		vendor=apple
+ 		;;
+ 
+-	# We use `pc' rather than `unknown'
+-	# because (1) that's what they normally are, and
+-	# (2) the word "unknown" tends to confuse beginning users.
+-	i*86 | x86_64)
+-	  basic_machine=$basic_machine-pc
+-	  ;;
+-	# Object if more than one company name word.
+-	*-*-*)
+-		echo Invalid configuration \`"$1"\': machine \`"$basic_machine"\' not recognized 1>&2
+-		exit 1
+-		;;
+-	# Recognize the basic CPU types with company name.
+-	580-* \
+-	| a29k-* \
+-	| aarch64-* | aarch64_be-* \
+-	| alpha-* | alphaev[4-8]-* | alphaev56-* | alphaev6[78]-* \
+-	| alpha64-* | alpha64ev[4-8]-* | alpha64ev56-* | alpha64ev6[78]-* \
+-	| alphapca5[67]-* | alpha64pca5[67]-* | arc-* | arceb-* \
+-	| arm-*  | armbe-* | armle-* | armeb-* | armv*-* \
+-	| avr-* | avr32-* \
+-	| ba-* \
+-	| be32-* | be64-* \
+-	| bfin-* | bs2000-* \
+-	| c[123]* | c30-* | [cjt]90-* | c4x-* \
+-	| c8051-* | clipper-* | craynv-* | csky-* | cydra-* \
+-	| d10v-* | d30v-* | dlx-* \
+-	| e2k-* | elxsi-* \
+-	| f30[01]-* | f700-* | fido-* | fr30-* | frv-* | fx80-* \
+-	| h8300-* | h8500-* \
+-	| hppa-* | hppa1.[01]-* | hppa2.0-* | hppa2.0[nw]-* | hppa64-* \
+-	| hexagon-* \
+-	| i*86-* | i860-* | i960-* | ia16-* | ia64-* \
+-	| ip2k-* | iq2000-* \
+-	| k1om-* \
+-	| le32-* | le64-* \
+-	| lm32-* \
+-	| m32c-* | m32r-* | m32rle-* \
+-	| m68000-* | m680[012346]0-* | m68360-* | m683?2-* | m68k-* \
+-	| m88110-* | m88k-* | maxq-* | mcore-* | metag-* \
+-	| microblaze-* | microblazeel-* \
+-	| mips-* | mipsbe-* | mipseb-* | mipsel-* | mipsle-* \
+-	| mips16-* \
+-	| mips64-* | mips64el-* \
+-	| mips64octeon-* | mips64octeonel-* \
+-	| mips64orion-* | mips64orionel-* \
+-	| mips64r5900-* | mips64r5900el-* \
+-	| mips64vr-* | mips64vrel-* \
+-	| mips64vr4100-* | mips64vr4100el-* \
+-	| mips64vr4300-* | mips64vr4300el-* \
+-	| mips64vr5000-* | mips64vr5000el-* \
+-	| mips64vr5900-* | mips64vr5900el-* \
+-	| mipsisa32-* | mipsisa32el-* \
+-	| mipsisa32r2-* | mipsisa32r2el-* \
+-	| mipsisa32r6-* | mipsisa32r6el-* \
+-	| mipsisa64-* | mipsisa64el-* \
+-	| mipsisa64r2-* | mipsisa64r2el-* \
+-	| mipsisa64r6-* | mipsisa64r6el-* \
+-	| mipsisa64sb1-* | mipsisa64sb1el-* \
+-	| mipsisa64sr71k-* | mipsisa64sr71kel-* \
+-	| mipsr5900-* | mipsr5900el-* \
+-	| mipstx39-* | mipstx39el-* \
+-	| mmix-* \
+-	| mt-* \
+-	| msp430-* \
+-	| nds32-* | nds32le-* | nds32be-* \
+-	| nfp-* \
+-	| nios-* | nios2-* | nios2eb-* | nios2el-* \
+-	| none-* | np1-* | ns16k-* | ns32k-* \
+-	| open8-* \
+-	| or1k*-* \
+-	| orion-* \
+-	| pdp10-* | pdp11-* | pj-* | pjl-* | pn-* | power-* \
+-	| powerpc-* | powerpc64-* | powerpc64le-* | powerpcle-* \
+-	| pru-* \
+-	| pyramid-* \
+-	| riscv32-* | riscv64-* \
+-	| rl78-* | romp-* | rs6000-* | rx-* \
+-	| sh-* | sh[1234]-* | sh[24]a-* | sh[24]aeb-* | sh[23]e-* | sh[34]eb-* | sheb-* | shbe-* \
+-	| shle-* | sh[1234]le-* | sh3ele-* | sh64-* | sh64le-* \
+-	| sparc-* | sparc64-* | sparc64b-* | sparc64v-* | sparc86x-* | sparclet-* \
+-	| sparclite-* \
+-	| sparcv8-* | sparcv9-* | sparcv9b-* | sparcv9v-* | sv1-* | sx*-* \
+-	| tahoe-* \
+-	| tic30-* | tic4x-* | tic54x-* | tic55x-* | tic6x-* | tic80-* \
+-	| tile*-* \
+-	| tron-* \
+-	| ubicom32-* \
+-	| v850-* | v850e-* | v850e1-* | v850es-* | v850e2-* | v850e2v3-* \
+-	| vax-* \
+-	| visium-* \
+-	| wasm32-* \
+-	| we32k-* \
+-	| x86-* | x86_64-* | xc16x-* | xps100-* \
+-	| xstormy16-* | xtensa*-* \
+-	| ymp-* \
+-	| z8k-* | z80-*)
+-		;;
+-	# Recognize the basic CPU types without company name, with glob match.
+-	xtensa*)
+-		basic_machine=$basic_machine-unknown
+-		;;
+ 	# Recognize the various machine names and aliases which stand
+ 	# for a CPU type and a company and sometimes even an OS.
+-	386bsd)
+-		basic_machine=i386-pc
+-		os=-bsd
+-		;;
+ 	3b1 | 7300 | 7300-att | att-7300 | pc7300 | safari | unixpc)
+-		basic_machine=m68000-att
++		cpu=m68000
++		vendor=att
+ 		;;
+ 	3b*)
+-		basic_machine=we32k-att
+-		;;
+-	a29khif)
+-		basic_machine=a29k-amd
+-		os=-udi
+-		;;
+-	abacus)
+-		basic_machine=abacus-unknown
+-		;;
+-	adobe68k)
+-		basic_machine=m68010-adobe
+-		os=-scout
+-		;;
+-	alliant | fx80)
+-		basic_machine=fx80-alliant
+-		;;
+-	altos | altos3068)
+-		basic_machine=m68k-altos
+-		;;
+-	am29k)
+-		basic_machine=a29k-none
+-		os=-bsd
+-		;;
+-	amd64)
+-		basic_machine=x86_64-pc
+-		;;
+-	amd64-*)
+-		basic_machine=x86_64-`echo "$basic_machine" | sed 's/^[^-]*-//'`
+-		;;
+-	amdahl)
+-		basic_machine=580-amdahl
+-		os=-sysv
+-		;;
+-	amiga | amiga-*)
+-		basic_machine=m68k-unknown
+-		;;
+-	amigaos | amigados)
+-		basic_machine=m68k-unknown
+-		os=-amigaos
+-		;;
+-	amigaunix | amix)
+-		basic_machine=m68k-unknown
+-		os=-sysv4
+-		;;
+-	apollo68)
+-		basic_machine=m68k-apollo
+-		os=-sysv
+-		;;
+-	apollo68bsd)
+-		basic_machine=m68k-apollo
+-		os=-bsd
+-		;;
+-	aros)
+-		basic_machine=i386-pc
+-		os=-aros
+-		;;
+-	asmjs)
+-		basic_machine=asmjs-unknown
+-		;;
+-	aux)
+-		basic_machine=m68k-apple
+-		os=-aux
+-		;;
+-	balance)
+-		basic_machine=ns32k-sequent
+-		os=-dynix
+-		;;
+-	blackfin)
+-		basic_machine=bfin-unknown
+-		os=-linux
+-		;;
+-	blackfin-*)
+-		basic_machine=bfin-`echo "$basic_machine" | sed 's/^[^-]*-//'`
+-		os=-linux
++		cpu=we32k
++		vendor=att
+ 		;;
+ 	bluegene*)
+-		basic_machine=powerpc-ibm
+-		os=-cnk
+-		;;
+-	c54x-*)
+-		basic_machine=tic54x-`echo "$basic_machine" | sed 's/^[^-]*-//'`
+-		;;
+-	c55x-*)
+-		basic_machine=tic55x-`echo "$basic_machine" | sed 's/^[^-]*-//'`
+-		;;
+-	c6x-*)
+-		basic_machine=tic6x-`echo "$basic_machine" | sed 's/^[^-]*-//'`
+-		;;
+-	c90)
+-		basic_machine=c90-cray
+-		os=-unicos
+-		;;
+-	cegcc)
+-		basic_machine=arm-unknown
+-		os=-cegcc
+-		;;
+-	convex-c1)
+-		basic_machine=c1-convex
+-		os=-bsd
+-		;;
+-	convex-c2)
+-		basic_machine=c2-convex
+-		os=-bsd
+-		;;
+-	convex-c32)
+-		basic_machine=c32-convex
+-		os=-bsd
+-		;;
+-	convex-c34)
+-		basic_machine=c34-convex
+-		os=-bsd
+-		;;
+-	convex-c38)
+-		basic_machine=c38-convex
+-		os=-bsd
+-		;;
+-	cray | j90)
+-		basic_machine=j90-cray
+-		os=-unicos
+-		;;
+-	craynv)
+-		basic_machine=craynv-cray
+-		os=-unicosmp
+-		;;
+-	cr16 | cr16-*)
+-		basic_machine=cr16-unknown
+-		os=-elf
+-		;;
+-	crds | unos)
+-		basic_machine=m68k-crds
+-		;;
+-	crisv32 | crisv32-* | etraxfs*)
+-		basic_machine=crisv32-axis
+-		;;
+-	cris | cris-* | etrax*)
+-		basic_machine=cris-axis
+-		;;
+-	crx)
+-		basic_machine=crx-unknown
+-		os=-elf
+-		;;
+-	da30 | da30-*)
+-		basic_machine=m68k-da30
+-		;;
+-	decstation | decstation-3100 | pmax | pmax-* | pmin | dec3100 | decstatn)
+-		basic_machine=mips-dec
++		cpu=powerpc
++		vendor=ibm
++		os=cnk
+ 		;;
+ 	decsystem10* | dec10*)
+-		basic_machine=pdp10-dec
+-		os=-tops10
++		cpu=pdp10
++		vendor=dec
++		os=tops10
+ 		;;
+ 	decsystem20* | dec20*)
+-		basic_machine=pdp10-dec
+-		os=-tops20
++		cpu=pdp10
++		vendor=dec
++		os=tops20
+ 		;;
+ 	delta | 3300 | motorola-3300 | motorola-delta \
+ 	      | 3300-motorola | delta-motorola)
+-		basic_machine=m68k-motorola
+-		;;
+-	delta88)
+-		basic_machine=m88k-motorola
+-		os=-sysv3
+-		;;
+-	dicos)
+-		basic_machine=i686-pc
+-		os=-dicos
+-		;;
+-	djgpp)
+-		basic_machine=i586-pc
+-		os=-msdosdjgpp
+-		;;
+-	dpx20 | dpx20-*)
+-		basic_machine=rs6000-bull
+-		os=-bosx
++		cpu=m68k
++		vendor=motorola
+ 		;;
+ 	dpx2*)
+-		basic_machine=m68k-bull
+-		os=-sysv3
+-		;;
+-	e500v[12])
+-		basic_machine=powerpc-unknown
+-		os=$os"spe"
+-		;;
+-	e500v[12]-*)
+-		basic_machine=powerpc-`echo "$basic_machine" | sed 's/^[^-]*-//'`
+-		os=$os"spe"
+-		;;
+-	ebmon29k)
+-		basic_machine=a29k-amd
+-		os=-ebmon
+-		;;
+-	elxsi)
+-		basic_machine=elxsi-elxsi
+-		os=-bsd
++		cpu=m68k
++		vendor=bull
++		os=sysv3
+ 		;;
+ 	encore | umax | mmax)
+-		basic_machine=ns32k-encore
++		cpu=ns32k
++		vendor=encore
+ 		;;
+-	es1800 | OSE68k | ose68k | ose | OSE)
+-		basic_machine=m68k-ericsson
+-		os=-ose
++	elxsi)
++		cpu=elxsi
++		vendor=elxsi
++		os=${os:-bsd}
+ 		;;
+ 	fx2800)
+-		basic_machine=i860-alliant
++		cpu=i860
++		vendor=alliant
+ 		;;
+ 	genix)
+-		basic_machine=ns32k-ns
+-		;;
+-	gmicro)
+-		basic_machine=tron-gmicro
+-		os=-sysv
+-		;;
+-	go32)
+-		basic_machine=i386-pc
+-		os=-go32
++		cpu=ns32k
++		vendor=ns
+ 		;;
+ 	h3050r* | hiux*)
+-		basic_machine=hppa1.1-hitachi
+-		os=-hiuxwe2
+-		;;
+-	h8300hms)
+-		basic_machine=h8300-hitachi
+-		os=-hms
+-		;;
+-	h8300xray)
+-		basic_machine=h8300-hitachi
+-		os=-xray
+-		;;
+-	h8500hms)
+-		basic_machine=h8500-hitachi
+-		os=-hms
+-		;;
+-	harris)
+-		basic_machine=m88k-harris
+-		os=-sysv3
+-		;;
+-	hp300-*)
+-		basic_machine=m68k-hp
+-		;;
+-	hp300bsd)
+-		basic_machine=m68k-hp
+-		os=-bsd
+-		;;
+-	hp300hpux)
+-		basic_machine=m68k-hp
+-		os=-hpux
++		cpu=hppa1.1
++		vendor=hitachi
++		os=hiuxwe2
+ 		;;
+ 	hp3k9[0-9][0-9] | hp9[0-9][0-9])
+-		basic_machine=hppa1.0-hp
++		cpu=hppa1.0
++		vendor=hp
+ 		;;
+ 	hp9k2[0-9][0-9] | hp9k31[0-9])
+-		basic_machine=m68000-hp
++		cpu=m68000
++		vendor=hp
+ 		;;
+ 	hp9k3[2-9][0-9])
+-		basic_machine=m68k-hp
++		cpu=m68k
++		vendor=hp
+ 		;;
+ 	hp9k6[0-9][0-9] | hp6[0-9][0-9])
+-		basic_machine=hppa1.0-hp
++		cpu=hppa1.0
++		vendor=hp
+ 		;;
+ 	hp9k7[0-79][0-9] | hp7[0-79][0-9])
+-		basic_machine=hppa1.1-hp
++		cpu=hppa1.1
++		vendor=hp
+ 		;;
+ 	hp9k78[0-9] | hp78[0-9])
+ 		# FIXME: really hppa2.0-hp
+-		basic_machine=hppa1.1-hp
++		cpu=hppa1.1
++		vendor=hp
+ 		;;
+ 	hp9k8[67]1 | hp8[67]1 | hp9k80[24] | hp80[24] | hp9k8[78]9 | hp8[78]9 | hp9k893 | hp893)
+ 		# FIXME: really hppa2.0-hp
+-		basic_machine=hppa1.1-hp
++		cpu=hppa1.1
++		vendor=hp
+ 		;;
+ 	hp9k8[0-9][13679] | hp8[0-9][13679])
+-		basic_machine=hppa1.1-hp
++		cpu=hppa1.1
++		vendor=hp
+ 		;;
+ 	hp9k8[0-9][0-9] | hp8[0-9][0-9])
+-		basic_machine=hppa1.0-hp
+-		;;
+-	hppaosf)
+-		basic_machine=hppa1.1-hp
+-		os=-osf
+-		;;
+-	hppro)
+-		basic_machine=hppa1.1-hp
+-		os=-proelf
+-		;;
+-	i370-ibm* | ibm*)
+-		basic_machine=i370-ibm
++		cpu=hppa1.0
++		vendor=hp
+ 		;;
+ 	i*86v32)
+-		basic_machine=`echo "$1" | sed -e 's/86.*/86-pc/'`
+-		os=-sysv32
++		cpu=`echo "$1" | sed -e 's/86.*/86/'`
++		vendor=pc
++		os=sysv32
+ 		;;
+ 	i*86v4*)
+-		basic_machine=`echo "$1" | sed -e 's/86.*/86-pc/'`
+-		os=-sysv4
++		cpu=`echo "$1" | sed -e 's/86.*/86/'`
++		vendor=pc
++		os=sysv4
+ 		;;
+ 	i*86v)
+-		basic_machine=`echo "$1" | sed -e 's/86.*/86-pc/'`
+-		os=-sysv
++		cpu=`echo "$1" | sed -e 's/86.*/86/'`
++		vendor=pc
++		os=sysv
+ 		;;
+ 	i*86sol2)
+-		basic_machine=`echo "$1" | sed -e 's/86.*/86-pc/'`
+-		os=-solaris2
+-		;;
+-	i386mach)
+-		basic_machine=i386-mach
+-		os=-mach
++		cpu=`echo "$1" | sed -e 's/86.*/86/'`
++		vendor=pc
++		os=solaris2
+ 		;;
+-	vsta)
+-		basic_machine=i386-unknown
+-		os=-vsta
++	j90 | j90-cray)
++		cpu=j90
++		vendor=cray
++		os=${os:-unicos}
+ 		;;
+ 	iris | iris4d)
+-		basic_machine=mips-sgi
++		cpu=mips
++		vendor=sgi
+ 		case $os in
+-		    -irix*)
++		    irix*)
+ 			;;
+ 		    *)
+-			os=-irix4
++			os=irix4
+ 			;;
+ 		esac
+ 		;;
+-	isi68 | isi)
+-		basic_machine=m68k-isi
+-		os=-sysv
+-		;;
+-	leon-*|leon[3-9]-*)
+-		basic_machine=sparc-`echo "$basic_machine" | sed 's/-.*//'`
+-		;;
+-	m68knommu)
+-		basic_machine=m68k-unknown
+-		os=-linux
+-		;;
+-	m68knommu-*)
+-		basic_machine=m68k-`echo "$basic_machine" | sed 's/^[^-]*-//'`
+-		os=-linux
+-		;;
+-	magnum | m3230)
+-		basic_machine=mips-mips
+-		os=-sysv
+-		;;
+-	merlin)
+-		basic_machine=ns32k-utek
+-		os=-sysv
+-		;;
+-	microblaze*)
+-		basic_machine=microblaze-xilinx
+-		;;
+-	mingw64)
+-		basic_machine=x86_64-pc
+-		os=-mingw64
+-		;;
+-	mingw32)
+-		basic_machine=i686-pc
+-		os=-mingw32
+-		;;
+-	mingw32ce)
+-		basic_machine=arm-unknown
+-		os=-mingw32ce
+-		;;
+ 	miniframe)
+-		basic_machine=m68000-convergent
+-		;;
+-	*mint | -mint[0-9]* | *MiNT | *MiNT[0-9]*)
+-		basic_machine=m68k-atari
+-		os=-mint
+-		;;
+-	mips3*-*)
+-		basic_machine=`echo "$basic_machine" | sed -e 's/mips3/mips64/'`
+-		;;
+-	mips3*)
+-		basic_machine=`echo "$basic_machine" | sed -e 's/mips3/mips64/'`-unknown
+-		;;
+-	monitor)
+-		basic_machine=m68k-rom68k
+-		os=-coff
++		cpu=m68000
++		vendor=convergent
+ 		;;
+-	morphos)
+-		basic_machine=powerpc-unknown
+-		os=-morphos
++	*mint | mint[0-9]* | *MiNT | *MiNT[0-9]*)
++		cpu=m68k
++		vendor=atari
++		os=mint
+ 		;;
+-	moxiebox)
+-		basic_machine=moxie-unknown
+-		os=-moxiebox
+-		;;
+-	msdos)
+-		basic_machine=i386-pc
+-		os=-msdos
+-		;;
+-	ms1-*)
+-		basic_machine=`echo "$basic_machine" | sed -e 's/ms1-/mt-/'`
+-		;;
+-	msys)
+-		basic_machine=i686-pc
+-		os=-msys
+-		;;
+-	mvs)
+-		basic_machine=i370-ibm
+-		os=-mvs
+-		;;
+-	nacl)
+-		basic_machine=le32-unknown
+-		os=-nacl
+-		;;
+-	ncr3000)
+-		basic_machine=i486-ncr
+-		os=-sysv4
+-		;;
+-	netbsd386)
+-		basic_machine=i386-unknown
+-		os=-netbsd
+-		;;
+-	netwinder)
+-		basic_machine=armv4l-rebel
+-		os=-linux
++	mipsEE* | ee)
++		cpu=mips64r5900el
++		vendor=scei
++		case $os in
++		    linux*)
++			;;
++		    *)
++			os=elf
++			;;
++		esac
+ 		;;
+-	news | news700 | news800 | news900)
+-		basic_machine=m68k-sony
+-		os=-newsos
++	iop)
++		cpu=mipsel
++		vendor=scei
++		os=irx
+ 		;;
+-	news1000)
+-		basic_machine=m68030-sony
+-		os=-newsos
++	dvp)
++		cpu=dvp
++		vendor=scei
++		os=elf
+ 		;;
+ 	news-3600 | risc-news)
+-		basic_machine=mips-sony
+-		os=-newsos
+-		;;
+-	necv70)
+-		basic_machine=v70-nec
+-		os=-sysv
++		cpu=mips
++		vendor=sony
++		os=newsos
+ 		;;
+ 	next | m*-next)
+-		basic_machine=m68k-next
++		cpu=m68k
++		vendor=next
+ 		case $os in
+-		    -nextstep* )
++		    openstep*)
++		        ;;
++		    nextstep*)
+ 			;;
+-		    -ns2*)
+-		      os=-nextstep2
++		    ns2*)
++		      os=nextstep2
+ 			;;
+ 		    *)
+-		      os=-nextstep3
++		      os=nextstep3
+ 			;;
+ 		esac
+ 		;;
+-	nh3000)
+-		basic_machine=m68k-harris
+-		os=-cxux
+-		;;
+-	nh[45]000)
+-		basic_machine=m88k-harris
+-		os=-cxux
+-		;;
+-	nindy960)
+-		basic_machine=i960-intel
+-		os=-nindy
+-		;;
+-	mon960)
+-		basic_machine=i960-intel
+-		os=-mon960
+-		;;
+-	nonstopux)
+-		basic_machine=mips-compaq
+-		os=-nonstopux
+-		;;
+ 	np1)
+-		basic_machine=np1-gould
+-		;;
+-	neo-tandem)
+-		basic_machine=neo-tandem
+-		;;
+-	nse-tandem)
+-		basic_machine=nse-tandem
+-		;;
+-	nsr-tandem)
+-		basic_machine=nsr-tandem
+-		;;
+-	nsv-tandem)
+-		basic_machine=nsv-tandem
+-		;;
+-	nsx-tandem)
+-		basic_machine=nsx-tandem
++		cpu=np1
++		vendor=gould
+ 		;;
+ 	op50n-* | op60c-*)
+-		basic_machine=hppa1.1-oki
+-		os=-proelf
+-		;;
+-	openrisc | openrisc-*)
+-		basic_machine=or32-unknown
+-		;;
+-	os400)
+-		basic_machine=powerpc-ibm
+-		os=-os400
+-		;;
+-	OSE68000 | ose68000)
+-		basic_machine=m68000-ericsson
+-		os=-ose
+-		;;
+-	os68k)
+-		basic_machine=m68k-none
+-		os=-os68k
++		cpu=hppa1.1
++		vendor=oki
++		os=proelf
+ 		;;
+ 	pa-hitachi)
+-		basic_machine=hppa1.1-hitachi
+-		os=-hiuxwe2
+-		;;
+-	paragon)
+-		basic_machine=i860-intel
+-		os=-osf
+-		;;
+-	parisc)
+-		basic_machine=hppa-unknown
+-		os=-linux
+-		;;
+-	parisc-*)
+-		basic_machine=hppa-`echo "$basic_machine" | sed 's/^[^-]*-//'`
+-		os=-linux
++		cpu=hppa1.1
++		vendor=hitachi
++		os=hiuxwe2
+ 		;;
+ 	pbd)
+-		basic_machine=sparc-tti
++		cpu=sparc
++		vendor=tti
+ 		;;
+ 	pbb)
+-		basic_machine=m68k-tti
+-		;;
+-	pc532 | pc532-*)
+-		basic_machine=ns32k-pc532
+-		;;
+-	pc98)
+-		basic_machine=i386-pc
+-		;;
+-	pc98-*)
+-		basic_machine=i386-`echo "$basic_machine" | sed 's/^[^-]*-//'`
+-		;;
+-	pentium | p5 | k5 | k6 | nexgen | viac3)
+-		basic_machine=i586-pc
+-		;;
+-	pentiumpro | p6 | 6x86 | athlon | athlon_*)
+-		basic_machine=i686-pc
+-		;;
+-	pentiumii | pentium2 | pentiumiii | pentium3)
+-		basic_machine=i686-pc
+-		;;
+-	pentium4)
+-		basic_machine=i786-pc
++		cpu=m68k
++		vendor=tti
+ 		;;
+-	pentium-* | p5-* | k5-* | k6-* | nexgen-* | viac3-*)
+-		basic_machine=i586-`echo "$basic_machine" | sed 's/^[^-]*-//'`
+-		;;
+-	pentiumpro-* | p6-* | 6x86-* | athlon-*)
+-		basic_machine=i686-`echo "$basic_machine" | sed 's/^[^-]*-//'`
+-		;;
+-	pentiumii-* | pentium2-* | pentiumiii-* | pentium3-*)
+-		basic_machine=i686-`echo "$basic_machine" | sed 's/^[^-]*-//'`
+-		;;
+-	pentium4-*)
+-		basic_machine=i786-`echo "$basic_machine" | sed 's/^[^-]*-//'`
++	pc532)
++		cpu=ns32k
++		vendor=pc532
+ 		;;
+ 	pn)
+-		basic_machine=pn-gould
+-		;;
+-	power)	basic_machine=power-ibm
++		cpu=pn
++		vendor=gould
+ 		;;
+-	ppc | ppcbe)	basic_machine=powerpc-unknown
++	power)
++		cpu=power
++		vendor=ibm
+ 		;;
+-	ppc-* | ppcbe-*)
+-		basic_machine=powerpc-`echo "$basic_machine" | sed 's/^[^-]*-//'`
+-		;;
+-	ppcle | powerpclittle)
+-		basic_machine=powerpcle-unknown
+-		;;
+-	ppcle-* | powerpclittle-*)
+-		basic_machine=powerpcle-`echo "$basic_machine" | sed 's/^[^-]*-//'`
+-		;;
+-	ppc64)	basic_machine=powerpc64-unknown
++	ps2)
++		cpu=i386
++		vendor=ibm
+ 		;;
+-	ppc64-*) basic_machine=powerpc64-`echo "$basic_machine" | sed 's/^[^-]*-//'`
++	rm[46]00)
++		cpu=mips
++		vendor=siemens
+ 		;;
+-	ppc64le | powerpc64little)
+-		basic_machine=powerpc64le-unknown
++	rtpc | rtpc-*)
++		cpu=romp
++		vendor=ibm
+ 		;;
+-	ppc64le-* | powerpc64little-*)
+-		basic_machine=powerpc64le-`echo "$basic_machine" | sed 's/^[^-]*-//'`
++	sde)
++		cpu=mipsisa32
++		vendor=sde
++		os=${os:-elf}
+ 		;;
+-	ps2)
+-		basic_machine=i386-ibm
++	simso-wrs)
++		cpu=sparclite
++		vendor=wrs
++		os=vxworks
+ 		;;
+-	pw32)
+-		basic_machine=i586-unknown
+-		os=-pw32
++	tower | tower-32)
++		cpu=m68k
++		vendor=ncr
+ 		;;
+-	rdos | rdos64)
+-		basic_machine=x86_64-pc
+-		os=-rdos
++	vpp*|vx|vx-*)
++		cpu=f301
++		vendor=fujitsu
+ 		;;
+-	rdos32)
+-		basic_machine=i386-pc
+-		os=-rdos
++	w65)
++		cpu=w65
++		vendor=wdc
+ 		;;
+-	rom68k)
+-		basic_machine=m68k-rom68k
+-		os=-coff
++	w89k-*)
++		cpu=hppa1.1
++		vendor=winbond
++		os=proelf
+ 		;;
+-	rm[46]00)
+-		basic_machine=mips-siemens
++	none)
++		cpu=none
++		vendor=none
+ 		;;
+-	rtpc | rtpc-*)
+-		basic_machine=romp-ibm
++	leon|leon[3-9])
++		cpu=sparc
++		vendor=$basic_machine
+ 		;;
+-	s390 | s390-*)
+-		basic_machine=s390-ibm
++	leon-*|leon[3-9]-*)
++		cpu=sparc
++		vendor=`echo "$basic_machine" | sed 's/-.*//'`
+ 		;;
+-	s390x | s390x-*)
+-		basic_machine=s390x-ibm
++
++	*-*)
++		# shellcheck disable=SC2162
++		IFS="-" read cpu vendor <<EOF
++$basic_machine
++EOF
+ 		;;
+-	sa29200)
+-		basic_machine=a29k-amd
+-		os=-udi
++	# We use `pc' rather than `unknown'
++	# because (1) that's what they normally are, and
++	# (2) the word "unknown" tends to confuse beginning users.
++	i*86 | x86_64)
++		cpu=$basic_machine
++		vendor=pc
+ 		;;
+-	sb1)
+-		basic_machine=mipsisa64sb1-unknown
++	# These rules are duplicated from below for sake of the special case above;
++	# i.e. things that normalized to x86 arches should also default to "pc"
++	pc98)
++		cpu=i386
++		vendor=pc
+ 		;;
+-	sb1el)
+-		basic_machine=mipsisa64sb1el-unknown
++	x64 | amd64)
++		cpu=x86_64
++		vendor=pc
+ 		;;
+-	sde)
+-		basic_machine=mipsisa32-sde
+-		os=-elf
++	# Recognize the basic CPU types without company name.
++	*)
++		cpu=$basic_machine
++		vendor=unknown
+ 		;;
+-	sei)
+-		basic_machine=mips-sei
+-		os=-seiux
++esac
++
++unset -v basic_machine
++
++# Decode basic machines in the full and proper CPU-Company form.
++case $cpu-$vendor in
++	# Here we handle the default manufacturer of certain CPU types in canonical form. It is in
++	# some cases the only manufacturer, in others, it is the most popular.
++	craynv-unknown)
++		vendor=cray
++		os=${os:-unicosmp}
+ 		;;
+-	sequent)
+-		basic_machine=i386-sequent
++	c90-unknown | c90-cray)
++		vendor=cray
++		os=${os:-unicos}
+ 		;;
+-	sh5el)
+-		basic_machine=sh5le-unknown
++	fx80-unknown)
++		vendor=alliant
+ 		;;
+-	simso-wrs)
+-		basic_machine=sparclite-wrs
+-		os=-vxworks
++	romp-unknown)
++		vendor=ibm
+ 		;;
+-	sps7)
+-		basic_machine=m68k-bull
+-		os=-sysv2
++	mmix-unknown)
++		vendor=knuth
+ 		;;
+-	spur)
+-		basic_machine=spur-unknown
++	microblaze-unknown | microblazeel-unknown)
++		vendor=xilinx
+ 		;;
+-	st2000)
+-		basic_machine=m68k-tandem
++	rs6000-unknown)
++		vendor=ibm
+ 		;;
+-	stratus)
+-		basic_machine=i860-stratus
+-		os=-sysv4
++	vax-unknown)
++		vendor=dec
+ 		;;
+-	strongarm-* | thumb-*)
+-		basic_machine=arm-`echo "$basic_machine" | sed 's/^[^-]*-//'`
++	pdp11-unknown)
++		vendor=dec
+ 		;;
+-	sun2)
+-		basic_machine=m68000-sun
++	we32k-unknown)
++		vendor=att
+ 		;;
+-	sun2os3)
+-		basic_machine=m68000-sun
+-		os=-sunos3
++	cydra-unknown)
++		vendor=cydrome
+ 		;;
+-	sun2os4)
+-		basic_machine=m68000-sun
+-		os=-sunos4
++	i370-ibm*)
++		vendor=ibm
+ 		;;
+-	sun3os3)
+-		basic_machine=m68k-sun
+-		os=-sunos3
++	orion-unknown)
++		vendor=highlevel
+ 		;;
+-	sun3os4)
+-		basic_machine=m68k-sun
+-		os=-sunos4
++	xps-unknown | xps100-unknown)
++		cpu=xps100
++		vendor=honeywell
+ 		;;
+-	sun4os3)
+-		basic_machine=sparc-sun
+-		os=-sunos3
++
++	# Here we normalize CPU types with a missing or matching vendor
++	dpx20-unknown | dpx20-bull)
++		cpu=rs6000
++		vendor=bull
++		os=${os:-bosx}
+ 		;;
+-	sun4os4)
+-		basic_machine=sparc-sun
+-		os=-sunos4
++
++	# Here we normalize CPU types irrespective of the vendor
++	amd64-*)
++		cpu=x86_64
+ 		;;
+-	sun4sol2)
+-		basic_machine=sparc-sun
+-		os=-solaris2
++	blackfin-*)
++		cpu=bfin
++		os=linux
+ 		;;
+-	sun3 | sun3-*)
+-		basic_machine=m68k-sun
++	c54x-*)
++		cpu=tic54x
+ 		;;
+-	sun4)
+-		basic_machine=sparc-sun
++	c55x-*)
++		cpu=tic55x
+ 		;;
+-	sun386 | sun386i | roadrunner)
+-		basic_machine=i386-sun
++	c6x-*)
++		cpu=tic6x
+ 		;;
+-	sv1)
+-		basic_machine=sv1-cray
+-		os=-unicos
++	e500v[12]-*)
++		cpu=powerpc
++		os=$os"spe"
+ 		;;
+-	symmetry)
+-		basic_machine=i386-sequent
+-		os=-dynix
++	mips3*-*)
++		cpu=mips64
+ 		;;
+-	t3e)
+-		basic_machine=alphaev5-cray
+-		os=-unicos
++	ms1-*)
++		cpu=mt
+ 		;;
+-	t90)
+-		basic_machine=t90-cray
+-		os=-unicos
++	m68knommu-*)
++		cpu=m68k
++		os=linux
+ 		;;
+-	tile*)
+-		basic_machine=$basic_machine-unknown
+-		os=-linux-gnu
++	m9s12z-* | m68hcs12z-* | hcs12z-* | s12z-*)
++		cpu=s12z
+ 		;;
+-	tx39)
+-		basic_machine=mipstx39-unknown
++	openrisc-*)
++		cpu=or32
+ 		;;
+-	tx39el)
+-		basic_machine=mipstx39el-unknown
++	parisc-*)
++		cpu=hppa
++		os=linux
+ 		;;
+-	toad1)
+-		basic_machine=pdp10-xkl
+-		os=-tops20
++	pentium-* | p5-* | k5-* | k6-* | nexgen-* | viac3-*)
++		cpu=i586
+ 		;;
+-	tower | tower-32)
+-		basic_machine=m68k-ncr
++	pentiumpro-* | p6-* | 6x86-* | athlon-* | athalon_*-*)
++		cpu=i686
+ 		;;
+-	tpf)
+-		basic_machine=s390x-ibm
+-		os=-tpf
++	pentiumii-* | pentium2-* | pentiumiii-* | pentium3-*)
++		cpu=i686
+ 		;;
+-	udi29k)
+-		basic_machine=a29k-amd
+-		os=-udi
++	pentium4-*)
++		cpu=i786
+ 		;;
+-	ultra3)
+-		basic_machine=a29k-nyu
+-		os=-sym1
++	pc98-*)
++		cpu=i386
+ 		;;
+-	v810 | necv810)
+-		basic_machine=v810-nec
+-		os=-none
++	ppc-* | ppcbe-*)
++		cpu=powerpc
+ 		;;
+-	vaxv)
+-		basic_machine=vax-dec
+-		os=-sysv
++	ppcle-* | powerpclittle-*)
++		cpu=powerpcle
+ 		;;
+-	vms)
+-		basic_machine=vax-dec
+-		os=-vms
++	ppc64-*)
++		cpu=powerpc64
+ 		;;
+-	vpp*|vx|vx-*)
+-		basic_machine=f301-fujitsu
++	ppc64le-* | powerpc64little-*)
++		cpu=powerpc64le
+ 		;;
+-	vxworks960)
+-		basic_machine=i960-wrs
+-		os=-vxworks
++	sb1-*)
++		cpu=mipsisa64sb1
+ 		;;
+-	vxworks68)
+-		basic_machine=m68k-wrs
+-		os=-vxworks
++	sb1el-*)
++		cpu=mipsisa64sb1el
+ 		;;
+-	vxworks29k)
+-		basic_machine=a29k-wrs
+-		os=-vxworks
++	sh5e[lb]-*)
++		cpu=`echo "$cpu" | sed 's/^\(sh.\)e\(.\)$/\1\2e/'`
+ 		;;
+-	w65*)
+-		basic_machine=w65-wdc
+-		os=-none
++	spur-*)
++		cpu=spur
+ 		;;
+-	w89k-*)
+-		basic_machine=hppa1.1-winbond
+-		os=-proelf
++	strongarm-* | thumb-*)
++		cpu=arm
+ 		;;
+-	x64)
+-		basic_machine=x86_64-pc
++	tx39-*)
++		cpu=mipstx39
+ 		;;
+-	xbox)
+-		basic_machine=i686-pc
+-		os=-mingw32
++	tx39el-*)
++		cpu=mipstx39el
+ 		;;
+-	xps | xps100)
+-		basic_machine=xps100-honeywell
++	x64-*)
++		cpu=x86_64
+ 		;;
+ 	xscale-* | xscalee[bl]-*)
+-		basic_machine=`echo "$basic_machine" | sed 's/^xscale/arm/'`
+-		;;
+-	ymp)
+-		basic_machine=ymp-cray
+-		os=-unicos
+-		;;
+-	none)
+-		basic_machine=none-none
+-		os=-none
++		cpu=`echo "$cpu" | sed 's/^xscale/arm/'`
+ 		;;
+ 
+-# Here we handle the default manufacturer of certain CPU types.  It is in
+-# some cases the only manufacturer, in others, it is the most popular.
+-	w89k)
+-		basic_machine=hppa1.1-winbond
+-		;;
+-	op50n)
+-		basic_machine=hppa1.1-oki
+-		;;
+-	op60c)
+-		basic_machine=hppa1.1-oki
+-		;;
+-	romp)
+-		basic_machine=romp-ibm
++	# Recognize the canonical CPU Types that limit and/or modify the
++	# company names they are paired with.
++	cr16-*)
++		os=${os:-elf}
+ 		;;
+-	mmix)
+-		basic_machine=mmix-knuth
++	crisv32-* | etraxfs*-*)
++		cpu=crisv32
++		vendor=axis
+ 		;;
+-	rs6000)
+-		basic_machine=rs6000-ibm
++	cris-* | etrax*-*)
++		cpu=cris
++		vendor=axis
+ 		;;
+-	vax)
+-		basic_machine=vax-dec
++	crx-*)
++		os=${os:-elf}
+ 		;;
+-	pdp11)
+-		basic_machine=pdp11-dec
+-		;;
+-	we32k)
+-		basic_machine=we32k-att
++	neo-tandem)
++		cpu=neo
++		vendor=tandem
+ 		;;
+-	sh[1234] | sh[24]a | sh[24]aeb | sh[34]eb | sh[1234]le | sh[23]ele)
+-		basic_machine=sh-unknown
++	nse-tandem)
++		cpu=nse
++		vendor=tandem
+ 		;;
+-	cydra)
+-		basic_machine=cydra-cydrome
++	nsr-tandem)
++		cpu=nsr
++		vendor=tandem
+ 		;;
+-	orion)
+-		basic_machine=orion-highlevel
++	nsv-tandem)
++		cpu=nsv
++		vendor=tandem
+ 		;;
+-	orion105)
+-		basic_machine=clipper-highlevel
++	nsx-tandem)
++		cpu=nsx
++		vendor=tandem
+ 		;;
+-	mac | mpw | mac-mpw)
+-		basic_machine=m68k-apple
++	s390-*)
++		cpu=s390
++		vendor=ibm
+ 		;;
+-	pmac | pmac-mpw)
+-		basic_machine=powerpc-apple
++	s390x-*)
++		cpu=s390x
++		vendor=ibm
+ 		;;
+-	*-unknown)
+-		# Make sure to match an already-canonicalized machine name.
++	tile*-*)
++		os=${os:-linux-gnu}
+ 		;;
++
+ 	*)
+-		echo Invalid configuration \`"$1"\': machine \`"$basic_machine"\' not recognized 1>&2
+-		exit 1
++		# Recognize the canonical CPU types that are allowed with any
++		# company name.
++		case $cpu in
++			1750a | 580 \
++			| a29k \
++			| aarch64 | aarch64_be \
++			| abacus \
++			| alpha | alphaev[4-8] | alphaev56 | alphaev6[78] \
++			| alpha64 | alpha64ev[4-8] | alpha64ev56 | alpha64ev6[78] \
++			| alphapca5[67] | alpha64pca5[67] \
++			| am33_2.0 \
++			| amdgcn \
++			| arc | arceb \
++			| arm  | arm[lb]e | arme[lb] | armv* \
++			| avr | avr32 \
++			| asmjs \
++			| ba \
++			| be32 | be64 \
++			| bfin | bpf | bs2000 \
++			| c[123]* | c30 | [cjt]90 | c4x \
++			| c8051 | clipper | craynv | csky | cydra \
++			| d10v | d30v | dlx | dsp16xx | dvp \
++			| e2k | elxsi | epiphany \
++			| f30[01] | f700 | fido | fr30 | frv | ft32 | fx80 \
++			| h8300 | h8500 \
++			| hppa | hppa1.[01] | hppa2.0 | hppa2.0[nw] | hppa64 \
++			| hexagon \
++			| i370 | i*86 | i860 | i960 | ia16 | ia64 \
++			| ip2k | iq2000 \
++			| k1om \
++			| le32 | le64 \
++			| lm32 \
++			| m32c | m32r | m32rle \
++			| m5200 | m68000 | m680[012346]0 | m68360 | m683?2 | m68k \
++			| m6811 | m68hc11 | m6812 | m68hc12 | m68hcs12x \
++			| m88110 | m88k | maxq | mb | mcore | mep | metag \
++			| microblaze | microblazeel \
++			| mips | mipsbe | mipseb | mipsel | mipsle \
++			| mips16 \
++			| mips64 | mips64eb | mips64el \
++			| mips64octeon | mips64octeonel \
++			| mips64orion | mips64orionel \
++			| mips64r5900 | mips64r5900el \
++			| mips64vr | mips64vrel \
++			| mips64vr4100 | mips64vr4100el \
++			| mips64vr4300 | mips64vr4300el \
++			| mips64vr5000 | mips64vr5000el \
++			| mips64vr5900 | mips64vr5900el \
++			| mipsisa32 | mipsisa32el \
++			| mipsisa32r2 | mipsisa32r2el \
++			| mipsisa32r6 | mipsisa32r6el \
++			| mipsisa64 | mipsisa64el \
++			| mipsisa64r2 | mipsisa64r2el \
++			| mipsisa64r6 | mipsisa64r6el \
++			| mipsisa64sb1 | mipsisa64sb1el \
++			| mipsisa64sr71k | mipsisa64sr71kel \
++			| mipsr5900 | mipsr5900el \
++			| mipstx39 | mipstx39el \
++			| mmix \
++			| mn10200 | mn10300 \
++			| moxie \
++			| mt \
++			| msp430 \
++			| nds32 | nds32le | nds32be \
++			| nfp \
++			| nios | nios2 | nios2eb | nios2el \
++			| none | np1 | ns16k | ns32k | nvptx \
++			| open8 \
++			| or1k* \
++			| or32 \
++			| orion \
++			| picochip \
++			| pdp10 | pdp11 | pj | pjl | pn | power \
++			| powerpc | powerpc64 | powerpc64le | powerpcle | powerpcspe \
++			| pru \
++			| pyramid \
++			| riscv | riscv32 | riscv64 \
++			| rl78 | romp | rs6000 | rx \
++			| score \
++			| sh | shl \
++			| sh[1234] | sh[24]a | sh[24]ae[lb] | sh[23]e | she[lb] | sh[lb]e \
++			| sh[1234]e[lb] |  sh[12345][lb]e | sh[23]ele | sh64 | sh64le \
++			| sparc | sparc64 | sparc64b | sparc64v | sparc86x | sparclet \
++			| sparclite \
++			| sparcv8 | sparcv9 | sparcv9b | sparcv9v | sv1 | sx* \
++			| spu \
++			| tahoe \
++			| tic30 | tic4x | tic54x | tic55x | tic6x | tic80 \
++			| tron \
++			| ubicom32 \
++			| v70 | v850 | v850e | v850e1 | v850es | v850e2 | v850e2v3 \
++			| vax \
++			| visium \
++			| w65 \
++			| wasm32 | wasm64 \
++			| we32k \
++			| x86 | x86_64 | xc16x | xgate | xps100 \
++			| xstormy16 | xtensa* \
++			| ymp \
++			| z8k | z80)
++				;;
++
++			*)
++				echo Invalid configuration \`"$1"\': machine \`"$cpu-$vendor"\' not recognized 1>&2
++				exit 1
++				;;
++		esac
+ 		;;
+ esac
+ 
+ # Here we canonicalize certain aliases for manufacturers.
+-case $basic_machine in
+-	*-digital*)
+-		basic_machine=`echo "$basic_machine" | sed 's/digital.*/dec/'`
++case $vendor in
++	digital*)
++		vendor=dec
+ 		;;
+-	*-commodore*)
+-		basic_machine=`echo "$basic_machine" | sed 's/commodore.*/cbm/'`
++	commodore*)
++		vendor=cbm
+ 		;;
+ 	*)
+ 		;;
+@@ -1365,200 +1301,238 @@ then
+ case $os in
+ 	# First match some system type aliases that might get confused
+ 	# with valid system types.
+-	# -solaris* is a basic system type, with this one exception.
+-	-auroraux)
+-		os=-auroraux
++	# solaris* is a basic system type, with this one exception.
++	auroraux)
++		os=auroraux
++		;;
++	bluegene*)
++		os=cnk
+ 		;;
+-	-solaris1 | -solaris1.*)
++	solaris1 | solaris1.*)
+ 		os=`echo $os | sed -e 's|solaris1|sunos4|'`
+ 		;;
+-	-solaris)
+-		os=-solaris2
++	solaris)
++		os=solaris2
+ 		;;
+-	-unixware*)
+-		os=-sysv4.2uw
++	unixware*)
++		os=sysv4.2uw
+ 		;;
+-	-gnu/linux*)
++	gnu/linux*)
+ 		os=`echo $os | sed -e 's|gnu/linux|linux-gnu|'`
+ 		;;
+ 	# es1800 is here to avoid being matched by es* (a different OS)
+-	-es1800*)
+-		os=-ose
++	es1800*)
++		os=ose
++		;;
++	# Some version numbers need modification
++	chorusos*)
++		os=chorusos
++		;;
++	isc)
++		os=isc2.2
++		;;
++	sco6)
++		os=sco5v6
++		;;
++	sco5)
++		os=sco3.2v5
++		;;
++	sco4)
++		os=sco3.2v4
++		;;
++	sco3.2.[4-9]*)
++		os=`echo $os | sed -e 's/sco3.2./sco3.2v/'`
++		;;
++	sco3.2v[4-9]* | sco5v6*)
++		# Don't forget version if it is 3.2v4 or newer.
++		;;
++	scout)
++		# Don't match below
++		;;
++	sco*)
++		os=sco3.2v2
++		;;
++	psos*)
++		os=psos
+ 		;;
+ 	# Now accept the basic system types.
+ 	# The portable systems comes first.
+ 	# Each alternative MUST end in a * to match a version number.
+-	# -sysv* is not here because it comes later, after sysvr4.
+-	-gnu* | -bsd* | -mach* | -minix* | -genix* | -ultrix* | -irix* \
+-	      | -*vms* | -sco* | -esix* | -isc* | -aix* | -cnk* | -sunos | -sunos[34]*\
+-	      | -hpux* | -unos* | -osf* | -luna* | -dgux* | -auroraux* | -solaris* \
+-	      | -sym* | -kopensolaris* | -plan9* \
+-	      | -amigaos* | -amigados* | -msdos* | -newsos* | -unicos* | -aof* \
+-	      | -aos* | -aros* | -cloudabi* | -sortix* \
+-	      | -nindy* | -vxsim* | -vxworks* | -ebmon* | -hms* | -mvs* \
+-	      | -clix* | -riscos* | -uniplus* | -iris* | -rtu* | -xenix* \
+-	      | -hiux* | -knetbsd* | -mirbsd* | -netbsd* \
+-	      | -bitrig* | -openbsd* | -solidbsd* | -libertybsd* \
+-	      | -ekkobsd* | -kfreebsd* | -freebsd* | -riscix* | -lynxos* \
+-	      | -bosx* | -nextstep* | -cxux* | -aout* | -elf* | -oabi* \
+-	      | -ptx* | -coff* | -ecoff* | -winnt* | -domain* | -vsta* \
+-	      | -udi* | -eabi* | -lites* | -ieee* | -go32* | -aux* | -hcos* \
+-	      | -chorusos* | -chorusrdb* | -cegcc* | -glidix* \
+-	      | -cygwin* | -msys* | -pe* | -psos* | -moss* | -proelf* | -rtems* \
+-	      | -midipix* | -mingw32* | -mingw64* | -linux-gnu* | -linux-android* \
+-	      | -linux-newlib* | -linux-musl* | -linux-uclibc* \
+-	      | -uxpv* | -beos* | -mpeix* | -udk* | -moxiebox* \
+-	      | -interix* | -uwin* | -mks* | -rhapsody* | -darwin* \
+-	      | -openstep* | -oskit* | -conix* | -pw32* | -nonstopux* \
+-	      | -storm-chaos* | -tops10* | -tenex* | -tops20* | -its* \
+-	      | -os2* | -vos* | -palmos* | -uclinux* | -nucleus* \
+-	      | -morphos* | -superux* | -rtmk* | -windiss* \
+-	      | -powermax* | -dnix* | -nx6 | -nx7 | -sei* | -dragonfly* \
+-	      | -skyos* | -haiku* | -rdos* | -toppers* | -drops* | -es* \
+-	      | -onefs* | -tirtos* | -phoenix* | -fuchsia* | -redox* | -bme* \
+-	      | -midnightbsd*)
++	# sysv* is not here because it comes later, after sysvr4.
++	gnu* | bsd* | mach* | minix* | genix* | ultrix* | irix* \
++	     | *vms* | esix* | aix* | cnk* | sunos | sunos[34]*\
++	     | hpux* | unos* | osf* | luna* | dgux* | auroraux* | solaris* \
++	     | sym* | kopensolaris* | plan9* \
++	     | amigaos* | amigados* | msdos* | newsos* | unicos* | aof* \
++	     | aos* | aros* | cloudabi* | sortix* | twizzler* \
++	     | nindy* | vxsim* | vxworks* | ebmon* | hms* | mvs* \
++	     | clix* | riscos* | uniplus* | iris* | isc* | rtu* | xenix* \
++	     | knetbsd* | mirbsd* | netbsd* \
++	     | bitrig* | openbsd* | solidbsd* | libertybsd* | os108* \
++	     | ekkobsd* | kfreebsd* | freebsd* | riscix* | lynxos* \
++	     | bosx* | nextstep* | cxux* | aout* | elf* | oabi* \
++	     | ptx* | coff* | ecoff* | winnt* | domain* | vsta* \
++	     | udi* | eabi* | lites* | ieee* | go32* | aux* | hcos* \
++	     | chorusrdb* | cegcc* | glidix* \
++	     | cygwin* | msys* | pe* | moss* | proelf* | rtems* \
++	     | midipix* | mingw32* | mingw64* | linux-gnu* | linux-android* \
++	     | linux-newlib* | linux-musl* | linux-uclibc* \
++	     | uxpv* | beos* | mpeix* | udk* | moxiebox* \
++	     | interix* | uwin* | mks* | rhapsody* | darwin* \
++	     | openstep* | oskit* | conix* | pw32* | nonstopux* \
++	     | storm-chaos* | tops10* | tenex* | tops20* | its* | irx* \
++	     | os2* | vos* | palmos* | uclinux* | nucleus* \
++	     | morphos* | superux* | rtmk* | windiss* \
++	     | powermax* | dnix* | nx6 | nx7 | sei* | dragonfly* \
++	     | skyos* | haiku* | rdos* | toppers* | drops* | es* \
++	     | onefs* | tirtos* | phoenix* | fuchsia* | redox* | bme* \
++	     | midnightbsd* | amdhsa* | unleashed* | emscripten* | wasi* \
++	     | nsk* | powerunix)
+ 	# Remember, each alternative MUST END IN *, to match a version number.
+ 		;;
+-	-qnx*)
+-		case $basic_machine in
+-		    x86-* | i*86-*)
++	qnx*)
++		case $cpu in
++		    x86 | i*86)
+ 			;;
+ 		    *)
+-			os=-nto$os
++			os=nto-$os
+ 			;;
+ 		esac
+ 		;;
+-	-nto-qnx*)
++	hiux*)
++		os=hiuxwe2
+ 		;;
+-	-nto*)
+-		os=`echo $os | sed -e 's|nto|nto-qnx|'`
++	nto-qnx*)
+ 		;;
+-	-sim | -xray | -os68k* | -v88r* \
+-	      | -windows* | -osx | -abug | -netware* | -os9* \
+-	      | -macos* | -mpw* | -magic* | -mmixware* | -mon960* | -lnews*)
++	nto*)
++		os=`echo $os | sed -e 's|nto|nto-qnx|'`
+ 		;;
+-	-mac*)
+-		os=`echo "$os" | sed -e 's|mac|macos|'`
++	sim | xray | os68k* | v88r* \
++	    | windows* | osx | abug | netware* | os9* \
++	    | macos* | mpw* | magic* | mmixware* | mon960* | lnews*)
+ 		;;
+-	-linux-dietlibc)
+-		os=-linux-dietlibc
++	linux-dietlibc)
++		os=linux-dietlibc
+ 		;;
+-	-linux*)
++	linux*)
+ 		os=`echo $os | sed -e 's|linux|linux-gnu|'`
+ 		;;
+-	-sunos5*)
+-		os=`echo "$os" | sed -e 's|sunos5|solaris2|'`
++	lynx*178)
++		os=lynxos178
+ 		;;
+-	-sunos6*)
+-		os=`echo "$os" | sed -e 's|sunos6|solaris3|'`
++	lynx*5)
++		os=lynxos5
+ 		;;
+-	-opened*)
+-		os=-openedition
++	lynx*)
++		os=lynxos
+ 		;;
+-	-os400*)
+-		os=-os400
++	mac*)
++		os=`echo "$os" | sed -e 's|mac|macos|'`
+ 		;;
+-	-wince*)
+-		os=-wince
++	opened*)
++		os=openedition
+ 		;;
+-	-utek*)
+-		os=-bsd
++	os400*)
++		os=os400
+ 		;;
+-	-dynix*)
+-		os=-bsd
++	sunos5*)
++		os=`echo "$os" | sed -e 's|sunos5|solaris2|'`
+ 		;;
+-	-acis*)
+-		os=-aos
++	sunos6*)
++		os=`echo "$os" | sed -e 's|sunos6|solaris3|'`
+ 		;;
+-	-atheos*)
+-		os=-atheos
++	wince*)
++		os=wince
+ 		;;
+-	-syllable*)
+-		os=-syllable
++	utek*)
++		os=bsd
+ 		;;
+-	-386bsd)
+-		os=-bsd
++	dynix*)
++		os=bsd
+ 		;;
+-	-ctix* | -uts*)
+-		os=-sysv
++	acis*)
++		os=aos
+ 		;;
+-	-nova*)
+-		os=-rtmk-nova
++	atheos*)
++		os=atheos
+ 		;;
+-	-ns2)
+-		os=-nextstep2
++	syllable*)
++		os=syllable
+ 		;;
+-	-nsk*)
+-		os=-nsk
++	386bsd)
++		os=bsd
++		;;
++	ctix* | uts*)
++		os=sysv
++		;;
++	nova*)
++		os=rtmk-nova
++		;;
++	ns2)
++		os=nextstep2
+ 		;;
+ 	# Preserve the version number of sinix5.
+-	-sinix5.*)
++	sinix5.*)
+ 		os=`echo $os | sed -e 's|sinix|sysv|'`
+ 		;;
+-	-sinix*)
+-		os=-sysv4
++	sinix*)
++		os=sysv4
+ 		;;
+-	-tpf*)
+-		os=-tpf
++	tpf*)
++		os=tpf
+ 		;;
+-	-triton*)
+-		os=-sysv3
++	triton*)
++		os=sysv3
+ 		;;
+-	-oss*)
+-		os=-sysv3
++	oss*)
++		os=sysv3
+ 		;;
+-	-svr4*)
+-		os=-sysv4
++	svr4*)
++		os=sysv4
+ 		;;
+-	-svr3)
+-		os=-sysv3
++	svr3)
++		os=sysv3
+ 		;;
+-	-sysvr4)
+-		os=-sysv4
++	sysvr4)
++		os=sysv4
+ 		;;
+-	# This must come after -sysvr4.
+-	-sysv*)
++	# This must come after sysvr4.
++	sysv*)
+ 		;;
+-	-ose*)
+-		os=-ose
++	ose*)
++		os=ose
+ 		;;
+-	-*mint | -mint[0-9]* | -*MiNT | -MiNT[0-9]*)
+-		os=-mint
++	*mint | mint[0-9]* | *MiNT | MiNT[0-9]*)
++		os=mint
+ 		;;
+-	-zvmoe)
+-		os=-zvmoe
++	zvmoe)
++		os=zvmoe
+ 		;;
+-	-dicos*)
+-		os=-dicos
++	dicos*)
++		os=dicos
+ 		;;
+-	-pikeos*)
++	pikeos*)
+ 		# Until real need of OS specific support for
+ 		# particular features comes up, bare metal
+ 		# configurations are quite functional.
+-		case $basic_machine in
++		case $cpu in
+ 		    arm*)
+-			os=-eabi
++			os=eabi
+ 			;;
+ 		    *)
+-			os=-elf
++			os=elf
+ 			;;
+ 		esac
+ 		;;
+-	-nacl*)
++	nacl*)
+ 		;;
+-	-ios)
++	ios)
+ 		;;
+-	-none)
++	none)
+ 		;;
+-	-*-eabi)
+-		case $basic_machine in
+-		    arm*)
+-			;;
+-		esac
++	*-eabi)
+ 		;;
+ 	*)
+-		# Get rid of the `-' at the beginning of $os.
+-		os=`echo $os | sed 's/[^-]*-//'`
+ 		echo Invalid configuration \`"$1"\': system \`"$os"\' not recognized 1>&2
+ 		exit 1
+ 		;;
+@@ -1575,254 +1549,261 @@ else
+ # will signal an error saying that MANUFACTURER isn't an operating
+ # system, and we'll never get to this point.
+ 
+-case $basic_machine in
++case $cpu-$vendor in
+ 	score-*)
+-		os=-elf
++		os=elf
+ 		;;
+ 	spu-*)
+-		os=-elf
++		os=elf
+ 		;;
+ 	*-acorn)
+-		os=-riscix1.2
++		os=riscix1.2
+ 		;;
+ 	arm*-rebel)
+-		os=-linux
++		os=linux
+ 		;;
+ 	arm*-semi)
+-		os=-aout
++		os=aout
+ 		;;
+ 	c4x-* | tic4x-*)
+-		os=-coff
++		os=coff
+ 		;;
+ 	c8051-*)
+-		os=-elf
++		os=elf
++		;;
++	clipper-intergraph)
++		os=clix
+ 		;;
+ 	hexagon-*)
+-		os=-elf
++		os=elf
+ 		;;
+ 	tic54x-*)
+-		os=-coff
++		os=coff
+ 		;;
+ 	tic55x-*)
+-		os=-coff
++		os=coff
+ 		;;
+ 	tic6x-*)
+-		os=-coff
++		os=coff
+ 		;;
+ 	# This must come before the *-dec entry.
+ 	pdp10-*)
+-		os=-tops20
++		os=tops20
+ 		;;
+ 	pdp11-*)
+-		os=-none
++		os=none
+ 		;;
+ 	*-dec | vax-*)
+-		os=-ultrix4.2
++		os=ultrix4.2
+ 		;;
+ 	m68*-apollo)
+-		os=-domain
++		os=domain
+ 		;;
+ 	i386-sun)
+-		os=-sunos4.0.2
++		os=sunos4.0.2
+ 		;;
+ 	m68000-sun)
+-		os=-sunos3
++		os=sunos3
+ 		;;
+ 	m68*-cisco)
+-		os=-aout
++		os=aout
+ 		;;
+ 	mep-*)
+-		os=-elf
++		os=elf
+ 		;;
+ 	mips*-cisco)
+-		os=-elf
++		os=elf
+ 		;;
+ 	mips*-*)
+-		os=-elf
++		os=elf
+ 		;;
+ 	or32-*)
+-		os=-coff
++		os=coff
+ 		;;
+ 	*-tti)	# must be before sparc entry or we get the wrong os.
+-		os=-sysv3
++		os=sysv3
+ 		;;
+ 	sparc-* | *-sun)
+-		os=-sunos4.1.1
++		os=sunos4.1.1
+ 		;;
+ 	pru-*)
+-		os=-elf
++		os=elf
+ 		;;
+ 	*-be)
+-		os=-beos
++		os=beos
+ 		;;
+ 	*-ibm)
+-		os=-aix
++		os=aix
+ 		;;
+ 	*-knuth)
+-		os=-mmixware
++		os=mmixware
+ 		;;
+ 	*-wec)
+-		os=-proelf
++		os=proelf
+ 		;;
+ 	*-winbond)
+-		os=-proelf
++		os=proelf
+ 		;;
+ 	*-oki)
+-		os=-proelf
++		os=proelf
+ 		;;
+ 	*-hp)
+-		os=-hpux
++		os=hpux
+ 		;;
+ 	*-hitachi)
+-		os=-hiux
++		os=hiux
+ 		;;
+ 	i860-* | *-att | *-ncr | *-altos | *-motorola | *-convergent)
+-		os=-sysv
++		os=sysv
+ 		;;
+ 	*-cbm)
+-		os=-amigaos
++		os=amigaos
+ 		;;
+ 	*-dg)
+-		os=-dgux
++		os=dgux
+ 		;;
+ 	*-dolphin)
+-		os=-sysv3
++		os=sysv3
+ 		;;
+ 	m68k-ccur)
+-		os=-rtu
++		os=rtu
+ 		;;
+ 	m88k-omron*)
+-		os=-luna
++		os=luna
+ 		;;
+ 	*-next)
+-		os=-nextstep
++		os=nextstep
+ 		;;
+ 	*-sequent)
+-		os=-ptx
++		os=ptx
+ 		;;
+ 	*-crds)
+-		os=-unos
++		os=unos
+ 		;;
+ 	*-ns)
+-		os=-genix
++		os=genix
+ 		;;
+ 	i370-*)
+-		os=-mvs
++		os=mvs
+ 		;;
+ 	*-gould)
+-		os=-sysv
++		os=sysv
+ 		;;
+ 	*-highlevel)
+-		os=-bsd
++		os=bsd
+ 		;;
+ 	*-encore)
+-		os=-bsd
++		os=bsd
+ 		;;
+ 	*-sgi)
+-		os=-irix
++		os=irix
+ 		;;
+ 	*-siemens)
+-		os=-sysv4
++		os=sysv4
+ 		;;
+ 	*-masscomp)
+-		os=-rtu
++		os=rtu
+ 		;;
+ 	f30[01]-fujitsu | f700-fujitsu)
+-		os=-uxpv
++		os=uxpv
+ 		;;
+ 	*-rom68k)
+-		os=-coff
++		os=coff
+ 		;;
+ 	*-*bug)
+-		os=-coff
++		os=coff
+ 		;;
+ 	*-apple)
+-		os=-macos
++		os=macos
+ 		;;
+ 	*-atari*)
+-		os=-mint
++		os=mint
++		;;
++	*-wrs)
++		os=vxworks
+ 		;;
+ 	*)
+-		os=-none
++		os=none
+ 		;;
+ esac
+ fi
+ 
+ # Here we handle the case where we know the os, and the CPU type, but not the
+ # manufacturer.  We pick the logical manufacturer.
+-vendor=unknown
+-case $basic_machine in
+-	*-unknown)
++case $vendor in
++	unknown)
+ 		case $os in
+-			-riscix*)
++			riscix*)
+ 				vendor=acorn
+ 				;;
+-			-sunos*)
++			sunos*)
+ 				vendor=sun
+ 				;;
+-			-cnk*|-aix*)
++			cnk*|-aix*)
+ 				vendor=ibm
+ 				;;
+-			-beos*)
++			beos*)
+ 				vendor=be
+ 				;;
+-			-hpux*)
++			hpux*)
+ 				vendor=hp
+ 				;;
+-			-mpeix*)
++			mpeix*)
+ 				vendor=hp
+ 				;;
+-			-hiux*)
++			hiux*)
+ 				vendor=hitachi
+ 				;;
+-			-unos*)
++			unos*)
+ 				vendor=crds
+ 				;;
+-			-dgux*)
++			dgux*)
+ 				vendor=dg
+ 				;;
+-			-luna*)
++			luna*)
+ 				vendor=omron
+ 				;;
+-			-genix*)
++			genix*)
+ 				vendor=ns
+ 				;;
+-			-mvs* | -opened*)
++			clix*)
++				vendor=intergraph
++				;;
++			mvs* | opened*)
+ 				vendor=ibm
+ 				;;
+-			-os400*)
++			os400*)
+ 				vendor=ibm
+ 				;;
+-			-ptx*)
++			ptx*)
+ 				vendor=sequent
+ 				;;
+-			-tpf*)
++			tpf*)
+ 				vendor=ibm
+ 				;;
+-			-vxsim* | -vxworks* | -windiss*)
++			vxsim* | vxworks* | windiss*)
+ 				vendor=wrs
+ 				;;
+-			-aux*)
++			aux*)
+ 				vendor=apple
+ 				;;
+-			-hms*)
++			hms*)
+ 				vendor=hitachi
+ 				;;
+-			-mpw* | -macos*)
++			mpw* | macos*)
+ 				vendor=apple
+ 				;;
+-			-*mint | -mint[0-9]* | -*MiNT | -MiNT[0-9]*)
++			*mint | mint[0-9]* | *MiNT | MiNT[0-9]*)
+ 				vendor=atari
+ 				;;
+-			-vos*)
++			vos*)
+ 				vendor=stratus
+ 				;;
+ 		esac
+-		basic_machine=`echo "$basic_machine" | sed "s/unknown/$vendor/"`
+ 		;;
+ esac
+ 
+-echo "$basic_machine$os"
++echo "$cpu-$vendor-$os"
+ exit
+ 
+ # Local variables:
+diff --git a/configure b/configure
+index c493c71..0ac0ecd 100755
+--- a/configure
++++ b/configure
+@@ -650,6 +650,8 @@ FEAT_FILE_INSPECT_FALSE
+ FEAT_FILE_INSPECT_TRUE
+ HAVE_SHARED_REP_FALSE
+ HAVE_SHARED_REP_TRUE
++HAVE_INTEL_HYPERSCAN_FALSE
++HAVE_INTEL_HYPERSCAN_TRUE
+ HAVE_INTEL_SOFT_CPM_FALSE
+ HAVE_INTEL_SOFT_CPM_TRUE
+ BUILD_RESPOND3_FALSE
+@@ -866,6 +868,9 @@ enable_flexresp3
+ enable_intel_soft_cpm
+ with_intel_soft_cpm_includes
+ with_intel_soft_cpm_libraries
++enable_intel_hyperscan
++with_intel_hyperscan_includes
++with_intel_hyperscan_libraries
+ enable_shared_rep
+ enable_large_pcap
+ enable_file_inspect
+@@ -1555,6 +1560,7 @@ Optional Features:
+   --disable-react          Disable interception and termination of offending HTTP accesses
+   --disable-flexresp3      Disable flexible responses (v3) on hostile connection attempts
+   --enable-intel-soft-cpm  Enable Intel Soft CPM support
++  --enable-intel-hyperscan  Enable Intel Hyperscan support
+   --enable-shared-rep      Enable use of Shared Memory for Reputation (Linux only)
+   --enable-large-pcap      Enable support for pcaps larger than 2 GB
+   --enable-file-inspect   Build with extended file inspection features.
+@@ -1588,6 +1594,8 @@ Optional Packages:
+   --with-lzma-libraries=DIR      liblzma library directory
+   --with-intel-soft-cpm-includes=DIR      Intel Soft CPM include directory
+   --with-intel-soft-cpm-libraries=DIR     Intel Soft CPM library directory
++  --with-intel-hyperscan-includes=DIR      Intel Hyperscan include directory
++  --with-intel-hyperscan-libraries=DIR     Intel Hyperscan library directory
+   --with-libnghttp2-includes=DIR    libnghttp2 include directory
+   --with-libnghttp2-libraries=DIR   libnghttp2 library directory
+ 
+@@ -6247,6 +6255,11 @@ else
+     lt_cv_sys_max_cmd_len=8192;
+     ;;
+ 
++  mint*)
++    # On MiNT this can take a long time and run out of memory.
++    lt_cv_sys_max_cmd_len=8192;
++    ;;
++
+   amigaos*)
+     # On AmigaOS with pdksh, this test takes hours, literally.
+     # So we just punt and use a minimum line length of 8192.
+@@ -8016,10 +8029,10 @@ s390*-*linux*|s390*-*tpf*|sparc*-*linux*)
+ 	  x86_64-*linux*)
+ 	    LD="${LD-ld} -m elf_x86_64"
+ 	    ;;
+-	  powerpcle-*linux*)
++	  powerpcle-*linux*|powerpc64le-*linux*)
+ 	    LD="${LD-ld} -m elf64lppc"
+ 	    ;;
+-	  powerpc-*linux*)
++	  powerpc-*linux*|powerpc64-*linux*)
+ 	    LD="${LD-ld} -m elf64ppc"
+ 	    ;;
+ 	  s390*-*linux*|s390*-*tpf*)
+@@ -12201,11 +12214,11 @@ darwin* | rhapsody*)
+   version_type=darwin
+   need_lib_prefix=no
+   need_version=no
+-  library_names_spec='$libname$release$major$shared_ext $libname$shared_ext'
++  library_names_spec='$libname$release$versuffix$shared_ext $libname$release$major$shared_ext $libname$shared_ext'
+   soname_spec='$libname$release$major$shared_ext'
+   shlibpath_overrides_runpath=yes
+   shlibpath_var=DYLD_LIBRARY_PATH
+-  shrext_cmds='`test .$module = .yes && echo .so || echo .dylib`'
++  shrext_cmds='`test .$module = .yes && echo .bundle || echo .dylib`'
+ 
+   sys_lib_search_path_spec="$sys_lib_search_path_spec /usr/local/lib"
+   sys_lib_dlsearch_path_spec='/usr/local/lib /lib /usr/lib'
+@@ -12231,7 +12244,14 @@ freebsd* | dragonfly*)
+     *) objformat=elf ;;
+     esac
+   fi
+-  version_type=freebsd-$objformat
++  # Handle Gentoo/FreeBSD as it was Linux
++  case $host_vendor in
++    gentoo)
++      version_type=linux ;;
++    *)
++      version_type=freebsd-$objformat ;;
++  esac
++
+   case $version_type in
+     freebsd-elf*)
+       library_names_spec='$libname$release$shared_ext$versuffix $libname$release$shared_ext$major $libname$shared_ext'
+@@ -12243,6 +12263,12 @@ freebsd* | dragonfly*)
+       library_names_spec='$libname$release$shared_ext$versuffix $libname$shared_ext$versuffix'
+       need_version=yes
+       ;;
++    linux)
++      library_names_spec='${libname}${release}${shared_ext}$versuffix ${libname}${release}${shared_ext}$major ${libname}${shared_ext}'
++      soname_spec='${libname}${release}${shared_ext}$major'
++      need_lib_prefix=no
++      need_version=no
++      ;;
+   esac
+   shlibpath_var=LD_LIBRARY_PATH
+   case $host_os in
+@@ -12451,9 +12477,6 @@ fi
+   # before this can be enabled.
+   hardcode_into_libs=yes
+ 
+-  # Add ABI-specific directories to the system library path.
+-  sys_lib_dlsearch_path_spec="/lib64 /usr/lib64 /lib /usr/lib"
+-
+   # Ideally, we could use ldconfig to report *all* directores which are
+   # searched for libraries, however this is still not possible.  Aside from not
+   # being certain /sbin/ldconfig is available, command
+@@ -12462,7 +12485,7 @@ fi
+   # appending ld.so.conf contents (and includes) to the search path.
+   if test -f /etc/ld.so.conf; then
+     lt_ld_extra=`awk '/^include / { system(sprintf("cd /etc; cat %s 2>/dev/null", \$2)); skip = 1; } { if (!skip) print \$0; skip = 0; }' < /etc/ld.so.conf | $SED -e 's/#.*//;/^[	 ]*hwcap[	 ]/d;s/[:,	]/ /g;s/=[^=]*$//;s/=[^= ]* / /g;s/"//g;/^$/d' | tr '\n' ' '`
+-    sys_lib_dlsearch_path_spec="$sys_lib_dlsearch_path_spec $lt_ld_extra"
++    sys_lib_dlsearch_path_spec="/lib /usr/lib $lt_ld_extra"
+   fi
+ 
+   # We used to test for /lib/ld.so.1 and disable shared libraries on
+@@ -17733,6 +17756,55 @@ if test "x$enable_intel_soft_cpm" = "xyes"; then
+     CPPFLAGS="${CPPFLAGS} -DINTEL_SOFT_CPM"
+ fi
+ 
++# Check whether --enable-intel_hyperscan was given.
++if test "${enable_intel_hyperscan+set}" = set; then :
++  enableval=$enable_intel_hyperscan; enable_intel_hyperscan="$enableval"
++else
++  enable_intel_hyperscan="no"
++fi
++
++
++
++# Check whether --with-intel_hyperscan_includes was given.
++if test "${with_intel_hyperscan_includes+set}" = set; then :
++  withval=$with_intel_hyperscan_includes; with_intel_hyperscan_includes="$withval"
++else
++  with_intel_hyperscan_includes="no"
++fi
++
++
++
++# Check whether --with-intel_hyperscan_libraries was given.
++if test "${with_intel_hyperscan_libraries+set}" = set; then :
++  withval=$with_intel_hyperscan_libraries; with_intel_hyperscan_libraries="$withval"
++else
++  with_intel_hyperscan_libraries="no"
++fi
++
++
++if test "x$with_intel_hyperscan_includes" != "xno"; then
++    enable_intel_hyperscan="yes"
++    CPPFLAGS="${CPPFLAGS} -I${with_intel_hyperscan_includes}"
++fi
++
++if test "x$with_intel_hyperscan_libraries" != "xno"; then
++    enable_intel_hyperscan="yes"
++    LDFLAGS="${LDFLAGS} -L${with_intel_hyperscan_libraries}"
++    LIBS="${LIBS} -lhs"
++fi
++
++ if test "x$enable_intel_hyperscan" = "xyes"; then
++  HAVE_INTEL_HYPERSCAN_TRUE=
++  HAVE_INTEL_HYPERSCAN_FALSE='#'
++else
++  HAVE_INTEL_HYPERSCAN_TRUE='#'
++  HAVE_INTEL_HYPERSCAN_FALSE=
++fi
++
++if test "x$enable_intel_hyperscan" = "xyes"; then
++    CPPFLAGS="${CPPFLAGS} -DINTEL_HYPERSCAN"
++fi
++
+ # Check whether --enable-shared_rep was given.
+ if test "${enable_shared_rep+set}" = set; then :
+   enableval=$enable_shared_rep; enable_shared_rep="$enableval"
+@@ -17993,7 +18065,7 @@ fi
+ 
+ 
+ if test $pkg_failed = yes; then
+-   	{ $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
++        { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+ $as_echo "no" >&6; }
+ 
+ if $PKG_CONFIG --atleast-pkgconfig-version 0.20; then
+@@ -18011,7 +18083,7 @@ fi
+ 
+ 	LLUAJIT="no"
+ elif test $pkg_failed = untried; then
+-     	{ $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
++        { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+ $as_echo "no" >&6; }
+ 	LLUAJIT="no"
+ else
+@@ -18513,6 +18585,10 @@ if test -z "${HAVE_INTEL_SOFT_CPM_TRUE}" && test -z "${HAVE_INTEL_SOFT_CPM_FALSE
+   as_fn_error $? "conditional \"HAVE_INTEL_SOFT_CPM\" was never defined.
+ Usually this means the macro was only invoked conditionally." "$LINENO" 5
+ fi
++if test -z "${HAVE_INTEL_HYPERSCAN_TRUE}" && test -z "${HAVE_INTEL_HYPERSCAN_FALSE}"; then
++  as_fn_error $? "conditional \"HAVE_INTEL_HYPERSCAN\" was never defined.
++Usually this means the macro was only invoked conditionally." "$LINENO" 5
++fi
+ if test -z "${HAVE_SHARED_REP_TRUE}" && test -z "${HAVE_SHARED_REP_FALSE}"; then
+   as_fn_error $? "conditional \"HAVE_SHARED_REP\" was never defined.
+ Usually this means the macro was only invoked conditionally." "$LINENO" 5
+diff --git a/configure.in b/configure.in
+index 74c83ec..9f22b88 100644
+--- a/configure.in
++++ b/configure.in
+@@ -1385,6 +1385,34 @@ if test "x$enable_intel_soft_cpm" = "xyes"; then
+     CPPFLAGS="${CPPFLAGS} -DINTEL_SOFT_CPM"
+ fi
+ 
++AC_ARG_ENABLE(intel_hyperscan,
++[  --enable-intel-hyperscan  Enable Intel Hyperscan support],
++       enable_intel_hyperscan="$enableval", enable_intel_hyperscan="no")
++
++AC_ARG_WITH(intel_hyperscan_includes,
++	[  --with-intel-hyperscan-includes=DIR      Intel Hyperscan include directory],
++	[with_intel_hyperscan_includes="$withval"],[with_intel_hyperscan_includes="no"])
++
++AC_ARG_WITH(intel_hyperscan_libraries,
++	[  --with-intel-hyperscan-libraries=DIR     Intel Hyperscan library directory],
++	[with_intel_hyperscan_libraries="$withval"],[with_intel_hyperscan_libraries="no"])
++
++if test "x$with_intel_hyperscan_includes" != "xno"; then
++    enable_intel_hyperscan="yes"
++    CPPFLAGS="${CPPFLAGS} -I${with_intel_hyperscan_includes}"
++fi
++
++if test "x$with_intel_hyperscan_libraries" != "xno"; then
++    enable_intel_hyperscan="yes"
++    LDFLAGS="${LDFLAGS} -L${with_intel_hyperscan_libraries}"
++    LIBS="${LIBS} -lhs"
++fi
++
++AM_CONDITIONAL(HAVE_INTEL_HYPERSCAN, test "x$enable_intel_hyperscan" = "xyes")
++if test "x$enable_intel_hyperscan" = "xyes"; then
++    CPPFLAGS="${CPPFLAGS} -DINTEL_HYPERSCAN"
++fi
++
+ AC_ARG_ENABLE(shared_rep,
+     [  --enable-shared-rep      Enable use of Shared Memory for Reputation (Linux only)],
+        enable_shared_rep="$enableval", enable_shared_rep="no")
+diff --git a/ltmain.sh b/ltmain.sh
+index 7f3523d..e774ddf 100644
+--- a/ltmain.sh
++++ b/ltmain.sh
+@@ -64,7 +64,7 @@ package_revision=2.4.6
+ # libraries, which are installed to $pkgauxdir.
+ 
+ # Set a version string for this script.
+-scriptversion=2015-01-20.17; # UTC
++scriptversion=2015-10-04.22; # UTC
+ 
+ # General shell script boiler plate, and helper functions.
+ # Written by Gary V. Vaughan, 2004
+@@ -1091,6 +1091,57 @@ func_relative_path ()
+ }
+ 
+ 
++# func_quote ARG
++# --------------
++# Aesthetically quote one ARG, store the result into $func_quote_result.  Note
++# that we keep attention to performance here (so far O(N) complexity as long as
++# func_append is O(1)).
++func_quote ()
++{
++    $debug_cmd
++
++    func_quote_result=$1
++
++    case $func_quote_result in
++      *[\\\`\"\$]*)
++        case $func_quote_result in
++          *[\[\*\?]*)
++            func_quote_result=`$ECHO "$func_quote_result" | $SED "$sed_quote_subst"`
++            return 0
++            ;;
++        esac
++
++        func_quote_old_IFS=$IFS
++        for _G_char in '\' '`' '"' '$'
++        do
++          # STATE($1) PREV($2) SEPARATOR($3)
++          set start "" ""
++          func_quote_result=dummy"$_G_char$func_quote_result$_G_char"dummy
++          IFS=$_G_char
++          for _G_part in $func_quote_result
++          do
++            case $1 in
++            quote)
++              func_append func_quote_result "$3$2"
++              set quote "$_G_part" "\\$_G_char"
++              ;;
++            start)
++              set first "" ""
++              func_quote_result=
++              ;;
++            first)
++              set quote "$_G_part" ""
++              ;;
++            esac
++          done
++          IFS=$func_quote_old_IFS
++        done
++        ;;
++      *) ;;
++    esac
++}
++
++
+ # func_quote_for_eval ARG...
+ # --------------------------
+ # Aesthetically quote ARGs to be evaled later.
+@@ -1107,12 +1158,8 @@ func_quote_for_eval ()
+     func_quote_for_eval_unquoted_result=
+     func_quote_for_eval_result=
+     while test 0 -lt $#; do
+-      case $1 in
+-        *[\\\`\"\$]*)
+-	  _G_unquoted_arg=`printf '%s\n' "$1" |$SED "$sed_quote_subst"` ;;
+-        *)
+-          _G_unquoted_arg=$1 ;;
+-      esac
++      func_quote "$1"
++      _G_unquoted_arg=$func_quote_result
+       if test -n "$func_quote_for_eval_unquoted_result"; then
+ 	func_append func_quote_for_eval_unquoted_result " $_G_unquoted_arg"
+       else
+@@ -2124,7 +2171,7 @@ fi
+ # a configuration failure hint, and exit.
+ func_fatal_configuration ()
+ {
+-    func_fatal_error ${1+"$@"} \
++    func__fatal_error ${1+"$@"} \
+       "See the $PACKAGE documentation for more information." \
+       "Fatal configuration error."
+ }
+@@ -5258,7 +5305,8 @@ else
+   if test \"\$libtool_execute_magic\" != \"$magic\"; then
+     file=\"\$0\""
+ 
+-    qECHO=`$ECHO "$ECHO" | $SED "$sed_quote_subst"`
++    func_quote "$ECHO"
++    qECHO=$func_quote_result
+     $ECHO "\
+ 
+ # A function that is used when there is no print builtin or printf.
+@@ -7079,6 +7127,16 @@ func_mode_link ()
+ 	    *" $arg "*) ;;
+ 	    * ) func_append new_inherited_linker_flags " $arg" ;;
+ 	esac
++
++	# As we are forced to pass -nostdlib to g++ during linking, the option
++	# -pthread{,s} is not in effect;  add the -lpthread to $deplist
++	# explicitly to link correctly.
++	if test "$tagname" = CXX -a x"$with_gcc" = xyes; then
++	  case "$arg" in
++	    -pthread*) func_append deplibs " -lpthread" ;;
++	  esac
++	fi
++
+ 	continue
+ 	;;
+ 
+@@ -7274,10 +7332,12 @@ func_mode_link ()
+       # -O*, -g*, -flto*, -fwhopr*, -fuse-linker-plugin GCC link-time optimization
+       # -specs=*             GCC specs files
+       # -stdlib=*            select c++ std lib with clang
++      # -fsanitize=*         Clang/GCC memory and address sanitizer
++      # -fuse-ld=*           Linker select flags for GCC
+       -64|-mips[0-9]|-r[0-9][0-9]*|-xarch=*|-xtarget=*|+DA*|+DD*|-q*|-m*| \
+       -t[45]*|-txscale*|-p|-pg|--coverage|-fprofile-*|-F*|@*|-tp=*|--sysroot=*| \
+       -O*|-g*|-flto*|-fwhopr*|-fuse-linker-plugin|-fstack-protector*|-stdlib=*| \
+-      -specs=*)
++      -specs=*|-fsanitize=*|-fuse-ld=*)
+         func_quote_for_eval "$arg"
+ 	arg=$func_quote_for_eval_result
+         func_append compile_command " $arg"
+@@ -10508,8 +10568,8 @@ EOF
+ 	    relink_command="$var=$func_quote_for_eval_result; export $var; $relink_command"
+ 	  fi
+ 	done
+-	relink_command="(cd `pwd`; $relink_command)"
+-	relink_command=`$ECHO "$relink_command" | $SED "$sed_quote_subst"`
++	func_quote "(cd `pwd`; $relink_command)"
++	relink_command=$func_quote_result
+       fi
+ 
+       # Only actually do things if not in dry run mode.
+@@ -10755,7 +10815,8 @@ EOF
+       done
+       # Quote the link command for shipping.
+       relink_command="(cd `pwd`; $SHELL \"$progpath\" $preserve_args --mode=relink $libtool_args @inst_prefix_dir@)"
+-      relink_command=`$ECHO "$relink_command" | $SED "$sed_quote_subst"`
++      func_quote "$relink_command"
++      relink_command=$func_quote_result
+       if test yes = "$hardcode_automatic"; then
+ 	relink_command=
+       fi
+diff --git a/src/detection-plugins/sp_pattern_match.c b/src/detection-plugins/sp_pattern_match.c
+index 8ba6609..93f02ec 100644
+--- a/src/detection-plugins/sp_pattern_match.c
++++ b/src/detection-plugins/sp_pattern_match.c
+@@ -63,6 +63,10 @@
+ #include "detection_util.h"
+ #include "sf_sechash.h"
+ 
++#ifdef INTEL_HYPERSCAN
++#include "hyperscan_common.h"
++#endif
++
+ /********************************************************************
+  * Macros
+  ********************************************************************/
+@@ -945,6 +949,11 @@ void PatternMatchFree(void *d)
+     if(pmd->shift_stride)
+         free(pmd->shift_stride);
+ 
++#ifdef INTEL_HYPERSCAN
++    if (pmd->hs_db)
++        hs_free_database(pmd->hs_db);
++#endif
++
+     free(pmd);
+ }
+ 
+@@ -1465,6 +1474,58 @@ void ValidateFastPattern(OptTreeNode *otn)
+     }
+ }
+ 
++#ifdef INTEL_HYPERSCAN
++
++static void make_hyperscan(PatternMatchData *idx) {
++    if (idx->hs_db) {
++        hs_free_database(idx->hs_db);
++        idx->hs_db = NULL;
++    }
++
++    unsigned flags = 0;
++    if (idx->nocase) {
++        flags |= HS_FLAG_CASELESS;
++    }
++
++    size_t hexlen = idx->pattern_size * 4;
++    char *hexbuf = SnortAlloc(hexlen + 1);
++    unsigned i;
++    char *buf;
++    for (i = 0, buf = hexbuf; i < idx->pattern_size; i++, buf += 4) {
++        snprintf(buf, 5, "\\x%02x", (unsigned char)idx->pattern_buf[i]);
++    }
++    hexbuf[hexlen] = '\0';
++
++    hs_compile_error_t *error = NULL;
++    hs_error_t rv = hs_compile(hexbuf, flags, HS_MODE_BLOCK, NULL, &idx->hs_db,
++                               &error);
++    free(hexbuf);
++
++    if (rv != HS_SUCCESS) {
++        if (error) {
++            FatalError("hs_compile() failed: %s\n", error->message);
++            hs_free_compile_error(error);
++            return;
++        } else {
++            FatalError("hs_compile() failed: returned error %d\n", rv);
++            return;
++        }
++    }
++
++    if (!idx->hs_db) {
++        FatalError("hs_compile() produced null database?\n");
++        return;
++    }
++
++    rv = hs_alloc_scratch(idx->hs_db, &hs_single_build_scratch);
++    if (rv != HS_SUCCESS) {
++        FatalError("hs_alloc_scratch() failed: returned error %d\n", rv);
++        return;
++    }
++}
++
++#endif // INTEL_HYPERSCAN
++
+ void make_precomp(PatternMatchData * idx)
+ {
+     if(idx->skip_stride)
+@@ -1475,6 +1536,10 @@ void make_precomp(PatternMatchData * idx)
+     idx->skip_stride = make_skip(idx->pattern_buf, idx->pattern_size);
+ 
+     idx->shift_stride = make_shift(idx->pattern_buf, idx->pattern_size);
++
++#ifdef INTEL_HYPERSCAN
++    make_hyperscan(idx);
++#endif
+ }
+ 
+ static char *PayloadExtractParameter(char *data, int *result_len)
+@@ -2242,6 +2307,35 @@ int uniSearchCI(const char *data, int dlen, PatternMatchData *pmd)
+     return uniSearchReal(data, dlen, pmd, 1);
+ }
+ 
++#ifdef INTEL_HYPERSCAN
++
++static int hyperscanCallback(unsigned int id, unsigned long long from,
++                             unsigned long long to, unsigned int flags,
++                             void *ctx) {
++    *(unsigned long long *)ctx = to;
++    return 1; // cease scanning
++}
++
++static int hyperscanSearch(const char *data, int dlen, const hs_database_t *db) {
++    unsigned long long match = 0;
++
++    hs_error_t err = hs_scan(db, data, dlen, 0, hs_single_scan_scratch,
++                             hyperscanCallback, &match);
++    if (err != HS_SUCCESS && err != HS_SCAN_TERMINATED) {
++        FatalError("hs_scan() failed: error %d\n", err);
++        return 1;
++    }
++
++    if (match == 0) { // No matches found.
++        return 0;
++    }
++
++    UpdateDoePtr((const uint8_t *)data + match, 0);
++    return 1;
++}
++
++#endif // INTEL_HYPERSCAN
++
+ /*
+  * single search function.
+  *
+@@ -2453,6 +2547,9 @@ static int uniSearchReal(const char *data, int dlen, PatternMatchData *pmd, int
+     }
+ #endif /* DEBUG_MSGS */
+ 
++#ifdef INTEL_HYPERSCAN
++    success = hyperscanSearch(base_ptr, depth, pmd->hs_db);
++#else
+     if(nocase)
+     {
+         success = mSearchCI(base_ptr, depth,
+@@ -2469,6 +2566,7 @@ static int uniSearchReal(const char *data, int dlen, PatternMatchData *pmd, int
+                           pmd->skip_stride,
+                           pmd->shift_stride);
+     }
++#endif // INTEL_HYPERSCAN
+ 
+ 
+ #ifdef DEBUG_MSGS
+@@ -2828,6 +2926,9 @@ void PatternMatchDuplicatePmd(void *src, PatternMatchData *pmd_dup)
+     pmd_dup->search = pmd_src->search;
+     pmd_dup->skip_stride = pmd_src->skip_stride;
+     pmd_dup->shift_stride = pmd_src->shift_stride;
++#ifdef INTEL_HYPERSCAN
++    pmd_dup->hs_db = pmd_src->hs_db;
++#endif
+     pmd_dup->pattern_max_jump_size = pmd_src->pattern_max_jump_size;
+     pmd_dup->fp = pmd_src->fp;
+     pmd_dup->fp_only = pmd_src->fp_only;
+diff --git a/src/detection-plugins/sp_pattern_match.h b/src/detection-plugins/sp_pattern_match.h
+index 0493dbb..fee3e61 100644
+--- a/src/detection-plugins/sp_pattern_match.h
++++ b/src/detection-plugins/sp_pattern_match.h
+@@ -42,6 +42,11 @@
+ /********************************************************************
+  * Data structures
+  ********************************************************************/
++
++#ifdef INTEL_HYPERSCAN
++struct hs_database;
++#endif
++
+ typedef struct _PatternMatchData
+ {
+     int offset;             /* pattern search start offset */
+@@ -71,6 +76,9 @@ typedef struct _PatternMatchData
+     int (*search)(const char *, int, struct _PatternMatchData *);  /* search function */
+     int *skip_stride; /* B-M skip array */
+     int *shift_stride; /* B-M shift array */
++#ifdef INTEL_HYPERSCAN
++    struct hs_database *hs_db; /* Hyperscan database */
++#endif
+     u_int pattern_max_jump_size; /* Maximum distance we can jump to search for
+                                   * this pattern again. */
+     OptFpList *fpl;         /* Pointer to the OTN FPList for this pattern */
+diff --git a/src/detection-plugins/sp_pcre.c b/src/detection-plugins/sp_pcre.c
+index 7cd6def..fbd51d9 100644
+--- a/src/detection-plugins/sp_pcre.c
++++ b/src/detection-plugins/sp_pcre.c
+@@ -48,6 +48,10 @@
+ 
+ #include <pcre.h>
+ 
++#ifdef INTEL_HYPERSCAN
++#include "hyperscan_common.h"
++#endif
++
+ #include "snort.h"
+ #include "profiler.h"
+ #ifdef PERF_PROFILING
+@@ -67,6 +71,16 @@ extern PreprocStats ruleOTNEvalPerfStats;
+  */
+ static int s_pcre_init = 1;
+ 
++#ifdef INTEL_HYPERSCAN
++static size_t total_pcre_count = 0;
++static size_t total_pcre_size = 0;
++static size_t total_hyperscan_size = 0;
++
++/* Switch on for correctness testing by always running pcre_exec. */
++#define INTEL_HYPERSCAN_CORRECTNESS_TEST 0
++
++#endif
++
+ void SnortPcreInit(struct _SnortConfig *, char *, OptTreeNode *, int);
+ void SnortPcreParse(struct _SnortConfig *, char *, PcreData *, OptTreeNode *);
+ void SnortPcreDump(PcreData *);
+@@ -76,12 +90,28 @@ void PcreFree(void *d)
+ {
+     PcreData *data = (PcreData *)d;
+ 
++#ifdef INTEL_HYPERSCAN
++    hs_free_database(data->hs_db);
++#endif
++
+     free(data->expression);
+     free(data->re);
+     free(data->pe);
+     free(data);
+ }
+ 
++#ifdef INTEL_HYPERSCAN
++static void HyperscanStats(struct _SnortConfig *sc, int unused, void *data)
++{
++    LogMessage("+--[HyperScan PCRE acceleration]------------------------------\n");
++    LogMessage("| Hyperscan version    : %s\n", hs_version());
++    LogMessage("| Number of PCREs      : %zu\n", total_pcre_count);
++    LogMessage("| Total PCRE size      : %zu bytes\n", total_pcre_size);
++    LogMessage("| Total Hyperscan size : %zu bytes\n", total_hyperscan_size);
++    LogMessage("+-------------------------------------------------------------\n");
++}
++#endif // INTEL_HYPERSCAN
++
+ uint32_t PcreHash(void *d)
+ {
+     int i,j,k,l,expression_len;
+@@ -163,6 +193,12 @@ void PcreDuplicatePcreData(void *src, PcreData *pcre_dup)
+     pcre_dup->search_offset = 0;
+     pcre_dup->pe = pcre_src->pe;
+     pcre_dup->re = pcre_src->re;
++
++#ifdef INTEL_HYPERSCAN
++    pcre_dup->hs_db = pcre_src->hs_db;
++    pcre_dup->hs_flags = pcre_src->hs_flags;
++    pcre_dup->hs_noconfirm = pcre_src->hs_noconfirm;
++#endif
+ }
+ 
+ int PcreAdjustRelativeOffsets(PcreData *pcre, uint32_t search_offset)
+@@ -233,12 +269,48 @@ void PcreCapture(struct _SnortConfig *sc, const void *code, const void *extra)
+         AddFuncToPostConfigList(sc, Ovector_Init, NULL);
+ #if SNORT_RELOAD
+         AddFuncToReloadList(Ovector_Reload, NULL);
++#endif
++#ifdef INTEL_HYPERSCAN
++        AddFuncToPostConfigList(sc, HyperscanStats, NULL);
+ #endif
+         s_pcre_init = 0;
+     }
+ 
+ }
+ 
++#ifdef INTEL_HYPERSCAN
++static void CalcPcreSize(const PcreData *pcre_data) {
++    int rc;
++    hs_error_t err;
++
++    size_t pcre_size = 0, pcre_studysize = 0, hs_size = 0;
++    rc =
++        pcre_fullinfo(pcre_data->re, pcre_data->pe, PCRE_INFO_SIZE, &pcre_size);
++    if (rc) {
++        FatalError("pcre_fullinfo returned error %d\n", rc);
++        return;
++    }
++    rc = pcre_fullinfo(pcre_data->re, pcre_data->pe, PCRE_INFO_STUDYSIZE,
++                       &pcre_studysize);
++    if (rc) {
++        FatalError("pcre_fullinfo returned error %d\n", rc);
++        return;
++    }
++
++    if (pcre_data->hs_db != NULL) {
++        err = hs_database_size(pcre_data->hs_db, &hs_size);
++        if (err != HS_SUCCESS) {
++            FatalError("hs_database_size returned error %d\n", err);
++            return;
++        }
++    }
++
++    total_pcre_count++;
++    total_pcre_size += pcre_size + pcre_studysize;
++    total_hyperscan_size += hs_size;
++}
++#endif // INTEL_HYPERSCAN
++
+ void SnortPcreInit(struct _SnortConfig *sc, char *data, OptTreeNode *otn, int protocol)
+ {
+     PcreData *pcre_data;
+@@ -272,11 +344,19 @@ void SnortPcreInit(struct _SnortConfig *sc, char *data, OptTreeNode *otn, int pr
+             free(pcre_data->pe);
+         if (pcre_data->re)
+             free(pcre_data->re);
++#ifdef INTEL_HYPERSCAN
++        if (pcre_data->hs_db)
++            hs_free_database(pcre_data->hs_db);
++#endif
+ 
+         free(pcre_data);
+         pcre_data = pcre_dup;
+     }
+ 
++#ifdef INTEL_HYPERSCAN
++    CalcPcreSize(pcre_data);
++#endif
++
+     /*
+      * attach it to the context node so that we can call each instance
+      * individually
+@@ -303,6 +383,105 @@ static inline void ValidatePcreHttpContentModifiers(PcreData *pcre_data)
+                 file_name, file_line);
+ }
+ 
++#ifdef INTEL_HYPERSCAN
++
++static int hyperscan_fixed_width(const char *re, unsigned int hs_flags) {
++    hs_expr_info_t *info = NULL;
++    hs_compile_error_t *compile_error = NULL;
++
++    hs_error_t err = hs_expression_info(re, hs_flags, &info, &compile_error);
++    if (err != HS_SUCCESS) {
++        hs_free_compile_error(compile_error);
++        return 0;
++    }
++
++    if (!info) {
++        return 0;
++    }
++
++    int fixed_width = (info->min_width == info->max_width &&
++            info->max_width != 0xffffffff);
++    free(info);
++    return fixed_width;
++}
++
++static void HyperscanBuild(PcreData *pcre_data, const char *re,
++                           int pcre_compile_flags) {
++    if (pcre_data == NULL || pcre_data->re == NULL || pcre_data->pe == NULL ||
++        re == NULL) {
++        return;
++    }
++
++    /* Note that we also allow PCRE_UNGREEDY even though there is no Hyperscan
++     * flag for it. Greedy/ungreedy semantics make no difference for the
++     * prefilter use case, where the match offset reported by Hyperscan is not
++     * used. */
++
++    const int supported_pcre_flags =
++        PCRE_CASELESS | PCRE_DOTALL | PCRE_MULTILINE | PCRE_UNGREEDY;
++    if (pcre_compile_flags & ~supported_pcre_flags) {
++        DEBUG_WRAP(DebugMessage(DEBUG_PATTERN_MATCH,
++                                "fail, pcre '%s' unsupported flags=%d\n",
++                                pcre_data->expression,
++                                pcre_compile_flags & ~supported_pcre_flags));
++        return;
++    }
++
++    int hs_flags = HS_FLAG_ALLOWEMPTY;
++    if (pcre_compile_flags & PCRE_CASELESS)
++        hs_flags |= HS_FLAG_CASELESS;
++    if (pcre_compile_flags & PCRE_DOTALL)
++        hs_flags |= HS_FLAG_DOTALL;
++    if (pcre_compile_flags & PCRE_MULTILINE)
++        hs_flags |= HS_FLAG_MULTILINE;
++
++    hs_error_t err;
++    hs_compile_error_t *compile_error = NULL;
++
++    /* First, we attempt to compile the pattern with full Hyperscan support. */
++    err = hs_compile(re, hs_flags, HS_MODE_BLOCK, NULL, &pcre_data->hs_db,
++                     &compile_error);
++    if (err != HS_SUCCESS) {
++        pcre_data->hs_db = NULL; // safety
++        if (compile_error) {
++            hs_free_compile_error(compile_error);
++        }
++    }
++
++    /* If the first attempt failed, we use Hyperscan's prefiltering support to
++     * attempt to build a simplified version of the pattern. */
++    if (!pcre_data->hs_db) {
++        hs_flags |= HS_FLAG_PREFILTER;
++        err = hs_compile(re, hs_flags, HS_MODE_BLOCK, NULL, &pcre_data->hs_db,
++                         &compile_error);
++        if (err != HS_SUCCESS) {
++            pcre_data->hs_db = NULL; // safety
++            if (compile_error) {
++                hs_free_compile_error(compile_error);
++            }
++        }
++    }
++
++    if (!pcre_data->hs_db) {
++        LogMessage("Hyperscan could not prefilter PCRE: %s\n", pcre_data->expression);
++        return;
++    }
++
++    pcre_data->hs_flags = hs_flags;
++
++    // Ensure that the scratch region can handle this database.
++    err = hs_alloc_scratch(pcre_data->hs_db, &hs_pcre_build_scratch);
++    if (err != HS_SUCCESS) {
++        FatalError("hs_alloc_scratch() failed: returned error %d\n", err);
++    }
++
++    if (!(hs_flags & HS_FLAG_PREFILTER) && hyperscan_fixed_width(re, hs_flags)) {
++        pcre_data->hs_noconfirm = 1;
++    }
++}
++
++#endif // INTEL_HYPERSCAN
++
+ void SnortPcreParse(struct _SnortConfig *sc, char *data, PcreData *pcre_data, OptTreeNode *otn)
+ {
+     const char *error;
+@@ -498,6 +677,10 @@ void SnortPcreParse(struct _SnortConfig *sc, char *data, PcreData *pcre_data, Op
+ 
+     PcreCheckAnchored(pcre_data);
+ 
++#ifdef INTEL_HYPERSCAN
++    HyperscanBuild(pcre_data, re, compile_flags);
++#endif
++
+     free(free_me);
+ 
+     return;
+@@ -560,6 +743,68 @@ void PcreCheckAnchored(PcreData *pcre_data)
+     }
+ }
+ 
++#ifdef INTEL_HYPERSCAN
++
++struct hs_context {
++    int matched;
++    int *found_offset;
++};
++
++static int hyperscan_callback(unsigned int id, unsigned long long from,
++                              unsigned long long to, unsigned int flags,
++                              void *ctx) {
++    struct hs_context *hsctx = ctx;
++
++    hsctx->matched = 1;
++    *(hsctx->found_offset) = (int)to; // safe, as buffer has int len
++
++    return 1; // halt matching
++}
++
++// Return 1 when we find the pattern, 0 when we don't.
++static int hyperscan_search(const PcreData *pcre_data, const char *buf, int len,
++                            int start_offset, int *found_offset) {
++    struct hs_context hsctx;
++    hsctx.matched = 0;
++    hsctx.found_offset = found_offset;
++
++    // XXX: we currently ignore start_offset, which might be used to reduce the
++    // size of the buffer being scanned. Need to be careful with anchors,
++    // assertions etc.
++
++    hs_error_t err = hs_scan(pcre_data->hs_db, buf, len, 0,
++                             hs_pcre_scan_scratch, hyperscan_callback, &hsctx);
++    if (err != HS_SUCCESS && err != HS_SCAN_TERMINATED) {
++        // An error occurred, fall through to pcre
++        LogMessage("hs_scan returned error %d\n", err);
++        return 0;
++    }
++
++    if (hsctx.matched == 0) {
++        // No matches, no need to run pcre.
++
++#if INTEL_HYPERSCAN_CORRECTNESS_TEST
++        // For correctness testing, run PCRE as well and ensure that it
++        // produces the same result.
++        int result =
++            pcre_exec(pcre_data->re, pcre_data->pe, buf, len, start_offset, 0,
++                      snort_conf->pcre_ovector, snort_conf->pcre_ovector_size);
++        if (result >= 0) {
++            LogMessage("err=%d, result=%d\n", err, result);
++            FatalError("Hyperscan said pattern wouldn't match, pcre says "
++                       "otherwise. Pattern is %s and options are %x\n",
++                       pcre_data->expression, pcre_data->options);
++        }
++#endif
++
++        return 0;
++    }
++
++    return 1;
++}
++
++#endif // INTEL_HYPERSCAN
++
+ /**
+  * Perform a search of the PCRE data.
+  *
+@@ -567,6 +812,7 @@ void PcreCheckAnchored(PcreData *pcre_data)
+  * @param buf buffer to search
+  * @param len size of buffer
+  * @param start_offset initial offset into the buffer
++ * @param no_offset_required if a match is found, the caller doesn't need its offset
+  * @param found_offset pointer to an integer so that we know where the search ended
+  *
+  * *found_offset will be set to -1 when the find is unsucessful OR the routine is inverted
+@@ -577,6 +823,7 @@ static int pcre_search(const PcreData *pcre_data,
+                        const char *buf,
+                        int len,
+                        int start_offset,
++                       int no_offset_required,
+                        int *found_offset)
+ {
+     int matched;
+@@ -596,6 +843,49 @@ static int pcre_search(const PcreData *pcre_data,
+ 
+     *found_offset = -1;
+ 
++#ifdef INTEL_HYPERSCAN
++    // Prefilter with Hyperscan if available; if Hyperscan says the buffer
++    // cannot match this PCRE, we can fall out here.
++    if (pcre_data->hs_db) {
++        int hs_match = hyperscan_search(pcre_data, buf, len, start_offset, found_offset);
++        int is_prefiltering = pcre_data->hs_flags & HS_FLAG_PREFILTER;
++
++        // If the pattern is inverted and we're not prefiltering AND
++        // start_offset was zero, we don't have to do confirm in PCRE.
++        if (pcre_data->options & SNORT_PCRE_INVERT) {
++            if (start_offset == 0 && !is_prefiltering) {
++                return !hs_match;
++            } else if (!hs_match) {
++                // Hyperscan didn't match, so pcre_exec will not match, so
++                // return that the INVERTED pcre did match.
++                return 1;
++            } else {
++                // Hyperscan did match, we need to confirm with pcre as we're
++                // prefiltering.
++                goto pcre_confirm;
++            }
++        }
++
++        // Note: we must do confirm in PCRE if a start_offset was specified.
++        if (start_offset == 0) {
++            if (pcre_data->hs_noconfirm || (!is_prefiltering && no_offset_required)) {
++                return hs_match; // No confirm necessary.
++            }
++        }
++
++        if (!hs_match) {
++            // No match in Hyperscan, so no PCRE match can occur.
++            return 0;
++        }
++
++        // Otherwise, Hyperscan claims there might be a match. Fall through to
++        // post-confirm with PCRE.
++    }
++
++pcre_confirm:
++
++#endif // INTEL_HYPERSCAN
++
+     result = pcre_exec(pcre_data->re,  /* result of pcre_compile() */
+                        pcre_data->pe,  /* result of pcre_study()   */
+                        buf,            /* the subject string */
+@@ -674,7 +964,7 @@ int SnortPcre(void *option_data, Packet *p)
+         if ( hb )
+         {
+             matched = pcre_search(
+-                pcre_data, (const char*)hb->buf, hb->length, 0, &found_offset);
++                pcre_data, (const char*)hb->buf, hb->length, 0, 1, &found_offset);
+ 
+             if ( matched )
+             {
+@@ -756,7 +1046,7 @@ int SnortPcre(void *option_data, Packet *p)
+                free(hexbuf);
+                );
+ 
+-    matched = pcre_search(pcre_data, (const char *)base_ptr, length, pcre_data->search_offset, &found_offset);
++    matched = pcre_search(pcre_data, (const char *)base_ptr, length, pcre_data->search_offset, 0, &found_offset);
+ 
+     /* set the doe_ptr if we have a valid offset */
+     if(found_offset > 0)
+diff --git a/src/detection-plugins/sp_pcre.h b/src/detection-plugins/sp_pcre.h
+index e6bdd7f..388df6e 100644
+--- a/src/detection-plugins/sp_pcre.h
++++ b/src/detection-plugins/sp_pcre.h
+@@ -49,6 +49,10 @@
+ 
+ void SetupPcre(void);
+ 
++#ifdef INTEL_HYPERSCAN
++struct hs_database;
++#endif
++
+ #include <pcre.h>
+ typedef struct _PcreData
+ {
+@@ -57,6 +61,11 @@ typedef struct _PcreData
+     int options;        /* sp_pcre specfic options (relative & inverse) */
+     char *expression;
+     uint32_t search_offset;
++#ifdef INTEL_HYPERSCAN
++    struct hs_database *hs_db; /* hyperscan database, if used */
++    int hs_flags;              /* hyperscan flags used for compile */
++    int hs_noconfirm;          /* hyperscan matches don't need confirm */
++#endif // INTEL_HYPERSCAN
+ } PcreData;
+ 
+ void PcreCapture(struct _SnortConfig *sc, const void *code, const void *extra);
+diff --git a/src/fpcreate.c b/src/fpcreate.c
+index cbc7d28..c6fb9ba 100644
+--- a/src/fpcreate.c
++++ b/src/fpcreate.c
+@@ -1011,6 +1011,13 @@ int fpSetDetectSearchMethod(FastPatternConfig *fp, char *method)
+        fp->search_method = MPSE_INTEL_CPM;
+        LogMessage("   Search-Method = Intel CPM\n");
+     }
++#endif
++#ifdef INTEL_HYPERSCAN
++    else if( !strcasecmp(method,"hyperscan") )
++    {
++       fp->search_method = MPSE_HYPERSCAN;
++       LogMessage("   Search-Method = Hyperscan\n");
++    }
+ #endif
+     else
+     {
+@@ -1537,12 +1544,24 @@ static int fpFinishPortGroupRule(SnortConfig *sc, PORT_GROUP *pg, PmType pm_type
+         if (fpDetectGetDebugPrintFastPatterns(fp))
+             PrintFastPatternInfo(otn, pmd, pattern, pattern_length, pm_type);
+ 
++#ifdef INTEL_HYPERSCAN
++        // If a pattern is marked with "fast_pattern: only;" it is assumed
++        // to be caseless (since all the AC matchers etc. run caselessly). We
++        // enforce this here so that the Intel PM integration can take
++        // advantage of its ability to run casefully as well. See the ternary
++        // nocase branch below.
++#endif
++
+         mpseAddPatternWithSnortConfig(
+                 sc,
+                 pg->pgPms[pm_type],
+                 pattern,
+                 pattern_length,
++#ifdef INTEL_HYPERSCAN
++                pmd->fp_only ? 1 : pmd->nocase, // Force nocase if fp_only
++#else
+                 pmd->nocase,
++#endif // INTEL_HYPERSCAN
+                 pmd->offset,
+                 pmd->depth,
+                 (unsigned)pmd->exception_flag,
+diff --git a/src/preprocessors/str_search.c b/src/preprocessors/str_search.c
+index ce1096c..62236d7 100644
+--- a/src/preprocessors/str_search.c
++++ b/src/preprocessors/str_search.c
+@@ -34,6 +34,12 @@
+ #include "str_search.h"
+ #include "mpse.h"
+ 
++#ifdef INTEL_HYPERSCAN
++#define STR_SEARCH_MPSE MPSE_HYPERSCAN
++#else
++#define STR_SEARCH_MPSE MPSE_AC_BNFA
++#endif
++
+ typedef struct tag_search
+ {
+     void *mpse;
+@@ -58,7 +64,7 @@ int SearchInit(unsigned int num)
+ 
+     for ( i = 0; i < num; i++ )
+     {
+-        _mpse[i].mpse = mpseNew(MPSE_AC_BNFA, MPSE_DONT_INCREMENT_GLOBAL_COUNT,
++        _mpse[i].mpse = mpseNew(STR_SEARCH_MPSE, MPSE_DONT_INCREMENT_GLOBAL_COUNT,
+                                 NULL, NULL, NULL);
+         if ( !_mpse[i].mpse )
+             return -1;
+@@ -73,7 +79,7 @@ int SearchReInit(unsigned int i)
+     if ( _mpse[i].mpse != NULL )
+         mpseFree(_mpse[i].mpse);
+ 
+-    _mpse[i].mpse = mpseNew(MPSE_AC_BNFA, MPSE_DONT_INCREMENT_GLOBAL_COUNT,
++    _mpse[i].mpse = mpseNew(STR_SEARCH_MPSE, MPSE_DONT_INCREMENT_GLOBAL_COUNT,
+                             NULL, NULL, NULL);
+     _mpse[i].max_len = 0;
+     _mpse[i].in_use=1;
+@@ -195,7 +201,7 @@ void SearchPrepPatterns(unsigned int mpse_id)
+  */
+ void *  SearchInstanceNew(void)
+ {
+-    return SearchInstanceNewEx(MPSE_AC_BNFA);
++    return SearchInstanceNewEx(STR_SEARCH_MPSE);
+ }
+ void *  SearchInstanceNewEx(unsigned method)
+ {
+diff --git a/src/reload.c b/src/reload.c
+index ba92728..ecba1ca 100644
+--- a/src/reload.c
++++ b/src/reload.c
+@@ -48,6 +48,9 @@
+ #ifdef INTEL_SOFT_CPM
+ #include "intel-soft-cpm.h"
+ #endif
++#ifdef INTEL_HYPERSCAN
++#include "sfutil/hyperscan.h"
++#endif
+ #ifdef HAVE_MALLOC_TRIM
+ #include <malloc.h>
+ #endif
+@@ -195,6 +198,10 @@ void CheckForReload(void)
+             IntelPmActivate(snort_conf);
+ #endif
+ 
++#ifdef INTEL_HYPERSCAN
++        HyperscanActivate();
++#endif
++
+         snort_swapped = 1;
+          setNapRuntimePolicy( getParserPolicy(snort_conf) );
+          setIpsRuntimePolicy( getParserPolicy(snort_conf) );
+@@ -930,6 +937,10 @@ void * ReloadConfigThread(void *data)
+                     IntelPmStopInstance();
+ #endif
+ 
++#ifdef INTEL_HYPERSCAN
++                HyperscanFreeGlobalContext();
++#endif
++
+                 if (snort_exiting && !reload_failed)
+                 {
+                     /* This will load the new preprocessor configurations and
+@@ -1053,6 +1064,10 @@ static int ControlSocketReloadSwap(uint16_t type, void *new_config, void **old_c
+         IntelPmActivate(snort_conf);
+ #endif
+ 
++#ifdef INTEL_HYPERSCAN
++    HyperscanActivate();
++#endif
++
+     /* Do any reload for plugin data */
+     idxPlugin = plugin_reload_funcs;
+     while(idxPlugin)
+@@ -1108,6 +1123,10 @@ static void ControlSocketReloadFree(uint16_t type, void *old_config, struct _THR
+         IntelPmStopInstance();
+ #endif
+ 
++#ifdef INTEL_HYPERSCAN
++    HyperscanFreeGlobalContext();
++#endif
++
+ #if defined(TARGET_BASED) && !defined(WIN32)
+     if(!IsAdaptiveConfigured())
+     {
+diff --git a/src/sfutil/Makefile.am b/src/sfutil/Makefile.am
+index f122dec..3dde241 100644
+--- a/src/sfutil/Makefile.am
++++ b/src/sfutil/Makefile.am
+@@ -6,6 +6,12 @@ if HAVE_INTEL_SOFT_CPM
+ INTEL_SOFT_CPM_SOURCES = intel-soft-cpm.c intel-soft-cpm.h
+ endif
+ 
++if HAVE_INTEL_HYPERSCAN
++INTEL_HYPERSCAN_SOURCES = \
++    hyperscan.c hyperscan.h \
++    hyperscan_common.c hyperscan_common.h
++endif
++
+ if BUILD_OPENSSL_MD5
+ OPENSSL_MD5 = \
+     md5.c md5.h 
+@@ -65,6 +71,7 @@ libsfutil_a_SOURCES = \
+ 	mpse_methods.h \
+ 	sfdebug.h \
+     $(INTEL_SOFT_CPM_SOURCES) \
++    $(INTEL_HYPERSCAN_SOURCES) \
+     $(OPENSSL_MD5) \
+     $(OPENSSL_SHA)
+ 
+diff --git a/src/sfutil/Makefile.in b/src/sfutil/Makefile.in
+index 43bb50f..504b5ee 100644
+--- a/src/sfutil/Makefile.in
++++ b/src/sfutil/Makefile.in
+@@ -127,10 +127,13 @@ am__libsfutil_a_SOURCES_DIST = sfghash.c sfghash.h sfhashfcn.c \
+ 	strvec.h sf_email_attach_decode.c sf_email_attach_decode.h \
+ 	sf_base64decode.c sf_base64decode.h Unified2_common.h \
+ 	sf_seqnums.h mpse_methods.h sfdebug.h intel-soft-cpm.c \
+-	intel-soft-cpm.h md5.c md5.h sha2.c sha2.h
++	intel-soft-cpm.h hyperscan.c hyperscan.h hyperscan_common.c \
++	hyperscan_common.h md5.c md5.h sha2.c sha2.h
+ @HAVE_INTEL_SOFT_CPM_TRUE@am__objects_1 = intel-soft-cpm.$(OBJEXT)
+-@BUILD_OPENSSL_MD5_TRUE@am__objects_2 = md5.$(OBJEXT)
+-@BUILD_OPENSSL_SHA_TRUE@am__objects_3 = sha2.$(OBJEXT)
++@HAVE_INTEL_HYPERSCAN_TRUE@am__objects_2 = hyperscan.$(OBJEXT) \
++@HAVE_INTEL_HYPERSCAN_TRUE@	hyperscan_common.$(OBJEXT)
++@BUILD_OPENSSL_MD5_TRUE@am__objects_3 = md5.$(OBJEXT)
++@BUILD_OPENSSL_SHA_TRUE@am__objects_4 = sha2.$(OBJEXT)
+ am_libsfutil_a_OBJECTS = sfghash.$(OBJEXT) sfhashfcn.$(OBJEXT) \
+ 	sflsq.$(OBJEXT) sfmemcap.$(OBJEXT) sfthd.$(OBJEXT) \
+ 	sfxhash.$(OBJEXT) ipobj.$(OBJEXT) getopt_long.$(OBJEXT) \
+@@ -147,7 +150,8 @@ am_libsfutil_a_OBJECTS = sfghash.$(OBJEXT) sfhashfcn.$(OBJEXT) \
+ 	sfPolicyUserData.$(OBJEXT) sfActionQueue.$(OBJEXT) \
+ 	sfrf.$(OBJEXT) strvec.$(OBJEXT) \
+ 	sf_email_attach_decode.$(OBJEXT) sf_base64decode.$(OBJEXT) \
+-	$(am__objects_1) $(am__objects_2) $(am__objects_3)
++	$(am__objects_1) $(am__objects_2) $(am__objects_3) \
++	$(am__objects_4)
+ libsfutil_a_OBJECTS = $(am_libsfutil_a_OBJECTS)
+ AM_V_P = $(am__v_P_@AM_V@)
+ am__v_P_ = $(am__v_P_@AM_DEFAULT_V@)
+@@ -351,6 +355,10 @@ top_srcdir = @top_srcdir@
+ AUTOMAKE_OPTIONS = foreign no-dependencies
+ noinst_LIBRARIES = libsfutil.a
+ @HAVE_INTEL_SOFT_CPM_TRUE@INTEL_SOFT_CPM_SOURCES = intel-soft-cpm.c intel-soft-cpm.h
++@HAVE_INTEL_HYPERSCAN_TRUE@INTEL_HYPERSCAN_SOURCES = \
++@HAVE_INTEL_HYPERSCAN_TRUE@    hyperscan.c hyperscan.h \
++@HAVE_INTEL_HYPERSCAN_TRUE@    hyperscan_common.c hyperscan_common.h
++
+ @BUILD_OPENSSL_MD5_TRUE@OPENSSL_MD5 = \
+ @BUILD_OPENSSL_MD5_TRUE@    md5.c md5.h 
+ 
+@@ -406,6 +414,7 @@ libsfutil_a_SOURCES = \
+ 	mpse_methods.h \
+ 	sfdebug.h \
+     $(INTEL_SOFT_CPM_SOURCES) \
++    $(INTEL_HYPERSCAN_SOURCES) \
+     $(OPENSSL_MD5) \
+     $(OPENSSL_SHA)
+ 
+diff --git a/src/sfutil/mpse.c b/src/sfutil/mpse.c
+index f71d484..a13e474 100644
+--- a/src/sfutil/mpse.c
++++ b/src/sfutil/mpse.c
+@@ -51,6 +51,10 @@
+ #include "intel-soft-cpm.h"
+ #endif
+ 
++#ifdef INTEL_HYPERSCAN
++#include "hyperscan.h"
++#endif
++
+ #include "profiler.h"
+ #include "snort.h"
+ #ifdef PERF_PROFILING
+@@ -126,6 +130,11 @@ void * mpseNew( int method, int use_global_counter_flag,
+         case MPSE_LOWMEM_Q:
+             p->obj = KTrieNew(1,userfree, optiontreefree, neg_list_free);
+             break;
++#ifdef INTEL_HYPERSCAN
++        case MPSE_HYPERSCAN:
++            p->obj = HyperscanNew(userfree, optiontreefree, neg_list_free);
++            break;
++#endif
+         default:
+             /* p is free'd below if no case */
+             break;
+@@ -203,6 +212,11 @@ void * mpseNewWithSnortConfig( struct _SnortConfig *sc,
+         case MPSE_INTEL_CPM:
+             p->obj=IntelPmNew(sc, userfree, optiontreefree, neg_list_free);
+             break;
++#endif
++#ifdef INTEL_HYPERSCAN
++        case MPSE_HYPERSCAN:
++            p->obj = HyperscanNew(userfree, optiontreefree, neg_list_free);
++            break;
+ #endif
+         default:
+             /* p is free'd below if no case */
+@@ -294,6 +308,13 @@ void   mpseFree( void * pvoid )
+             free(p);
+             break;
+ #endif
++#ifdef INTEL_HYPERSCAN
++        case MPSE_HYPERSCAN:
++            if (p->obj)
++                HyperscanFree((HyperscanPm *)p->obj);
++            free(p);
++            return;
++#endif
+ 
+         default:
+             return;
+@@ -329,6 +350,11 @@ int  mpseAddPattern ( void * pvoid, void * P, int m,
+      case MPSE_LOWMEM_Q:
+        return KTrieAddPattern( (KTRIE_STRUCT *)p->obj, (unsigned char *)P, m,
+                                 noCase, negative, ID );
++#ifdef INTEL_HYPERSCAN
++     case MPSE_HYPERSCAN:
++       return HyperscanAddPattern((HyperscanPm *)p->obj, (unsigned char *)P, m,
++               noCase, offset, depth, negative, ID, IID);
++#endif
+      default:
+        return -1;
+    }
+@@ -368,6 +394,11 @@ int  mpseAddPatternWithSnortConfig ( SnortConfig *sc, void * pvoid, void * P, in
+      case MPSE_INTEL_CPM:
+        return IntelPmAddPattern(sc, (IntelPm *)p->obj, (unsigned char *)P, m,
+                noCase, negative, ID, IID);
++#endif
++#ifdef INTEL_HYPERSCAN
++     case MPSE_HYPERSCAN:
++       return HyperscanAddPattern((HyperscanPm *)p->obj, (unsigned char *)P, m,
++               noCase, offset, depth, negative, ID, IID);
+ #endif
+      default:
+        return -1;
+@@ -416,6 +447,10 @@ int  mpsePrepPatterns  ( void * pvoid,
+      case MPSE_LOWMEM_Q:
+        return KTrieCompile( (KTRIE_STRUCT *)p->obj, build_tree, neg_list_func );
+ 
++#ifdef INTEL_HYPERSCAN
++     case MPSE_HYPERSCAN:
++       return HyperscanCompile((HyperscanPm *)p->obj, build_tree, neg_list_func);
++#endif
+      default:
+        retv = 1;
+      break;
+@@ -459,6 +494,10 @@ int  mpsePrepPatternsWithSnortConf  ( struct _SnortConfig *sc, void * pvoid,
+      case MPSE_INTEL_CPM:
+        return IntelPmFinishGroup(sc, (IntelPm *)p->obj, build_tree, neg_list_func);
+ #endif
++#ifdef INTEL_HYPERSCAN
++     case MPSE_HYPERSCAN:
++       return HyperscanCompileWithSnortConf(sc, (HyperscanPm *)p->obj, build_tree, neg_list_func);
++#endif
+ 
+      default:
+        retv = 1;
+@@ -501,6 +540,11 @@ int mpsePrintInfo( void *pvoid )
+      case MPSE_ACB:
+      case MPSE_ACSB:
+       return acsmPrintDetailInfo2( (ACSM_STRUCT2*) p->obj );
++#ifdef INTEL_HYPERSCAN
++     case MPSE_HYPERSCAN:
++      HyperscanPrintInfo( (HyperscanPm*) p->obj );
++      break;
++#endif
+ 
+      default:
+        return 1;
+@@ -541,6 +585,11 @@ int mpsePrintSummary(int method)
+ 
+             }
+             break;
++#ifdef INTEL_HYPERSCAN
++        case MPSE_HYPERSCAN:
++            HyperscanPrintSummary();
++            break;
++#endif
+         default:
+             break;
+     }
+@@ -579,6 +628,11 @@ int mpsePrintSummaryWithSnortConfig(SnortConfig *sc, int method)
+ 
+             }
+             break;
++#ifdef INTEL_HYPERSCAN
++        case MPSE_HYPERSCAN:
++            HyperscanPrintSummary();
++            break;
++#endif
+         default:
+             break;
+     }
+@@ -651,6 +705,13 @@ int mpseSearch( void *pvoid, const unsigned char * T, int n,
+         PREPROC_PROFILE_END(mpsePerfStats);
+         return ret;
+ #endif
++#ifdef INTEL_HYPERSCAN
++     case MPSE_HYPERSCAN:
++        ret = HyperscanSearch((HyperscanPm *)p->obj, (unsigned char *)T, n, action, data);
++        *current_state = 0;
++        PREPROC_PROFILE_END(mpsePerfStats);
++        return ret;
++#endif
+ 
+      default:
+        PREPROC_PROFILE_END(mpsePerfStats);
+@@ -693,6 +754,9 @@ int mpseSearchAll( void *pvoid, const unsigned char * T, int n,
+      case MPSE_LOWMEM_Q:
+ #ifdef INTEL_SOFT_CPM
+      case MPSE_INTEL_CPM:
++#endif
++#ifdef INTEL_HYPERSCAN
++     case MPSE_HYPERSCAN:
+ #endif
+      default:
+       //search all not implemented.
+@@ -728,6 +792,10 @@ int mpseGetPatternCount(void *pvoid)
+ #ifdef INTEL_SOFT_CPM
+         case MPSE_INTEL_CPM:
+             return IntelGetPatternCount((IntelPm *)p->obj);
++#endif
++#ifdef INTEL_HYPERSCAN
++        case MPSE_HYPERSCAN:
++            return HyperscanGetPatternCount((HyperscanPm *)p->obj);
+ #endif
+     }
+     return 0;
+diff --git a/src/sfutil/mpse_methods.h b/src/sfutil/mpse_methods.h
+index 5f3f135..d369660 100644
+--- a/src/sfutil/mpse_methods.h
++++ b/src/sfutil/mpse_methods.h
+@@ -40,6 +40,10 @@
+ #define MPSE_INTEL_CPM 14
+ #endif /* INTEL_SOFT_CPM */
+ 
++#ifdef INTEL_HYPERSCAN
++#define MPSE_HYPERSCAN 20
++#endif /* INTEL_HYPERSCAN */
++
+ typedef enum {
+     MPSE_PATTERN_CASE,
+     MPSE_PATTERN_NOCASE
+diff --git a/src/snort.c b/src/snort.c
+index 19ed0bf..d41ebd5 100644
+--- a/src/snort.c
++++ b/src/snort.c
+@@ -165,6 +165,10 @@
+ #include "sfutil/intel-soft-cpm.h"
+ #endif
+ 
++#ifdef INTEL_HYPERSCAN
++#include "sfutil/hyperscan.h"
++#endif
++
+ #include "session_api.h"
+ 
+ #include "stream_common.h"
+@@ -3965,6 +3969,10 @@ static void SnortCleanup(int exit_val)
+     IntelPmStopInstance();
+ #endif
+ 
++#ifdef INTEL_HYPERSCAN
++    HyperscanFreeGlobalContext();
++#endif
++
+     SynToMulticastDstIpDestroy();
+     MulticastReservedIpDestroy();
+ 
+@@ -5372,6 +5380,10 @@ void SnortInit(int argc, char **argv)
+         IntelPmActivate(snort_conf);
+ #endif
+ 
++#ifdef INTEL_HYPERSCAN
++    HyperscanActivate();
++#endif
++
+ #ifdef PPM_MGR
+     PPM_PRINT_CFG(&snort_conf->ppm_cfg);
+ #endif
+
+diff --git a/src/sfutil/hyperscan.c b/src/sfutil/hyperscan.c
+new file mode 100644
+index 0000000..f5959c1
+--- /dev/null
++++ b/src/sfutil/hyperscan.c
+@@ -0,0 +1,392 @@
++/*
++** Copyright (c) 2015-2016, Intel Corporation.
++**
++** This program is free software; you can redistribute it and/or modify
++** it under the terms of the GNU General Public License Version 2 as
++** published by the Free Software Foundation.  You may not use, modify or
++** distribute this program under any other version of the GNU General
++** Public License.
++**
++** This program is distributed in the hope that it will be useful,
++** but WITHOUT ANY WARRANTY; without even the implied warranty of
++** MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++** GNU General Public License for more details.
++**
++** You should have received a copy of the GNU General Public License
++** along with this program; if not, write to the Free Software
++** Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
++*/
++
++
++#include <stdio.h>
++#include <stdlib.h>
++#include <string.h>
++
++#ifdef HAVE_CONFIG_H
++#include "config.h"
++#endif
++
++#include "hyperscan.h"
++#include "hyperscan_common.h"
++#include "snort.h"
++#include "snort_debug.h"
++#include "util.h"
++
++#define INITIAL_PATTERN_ARRAY_ALLOC_SIZE 10
++
++// Summary information; this is global and static for now.
++typedef struct _HyperscanSummary {
++    unsigned int db_count; // number of databases
++    size_t db_bytes;       // total bytes compiled
++    size_t scratch_size;   // size of scratch space
++} HyperscanSummary;
++
++static HyperscanSummary summary;
++
++HyperscanPm *HyperscanNew(void (*user_free)(void *p),
++                          void (*option_tree_free)(void **p),
++                          void (*neg_list_free)(void **p)) {
++    HyperscanPm *pm = SnortAlloc(sizeof(HyperscanPm));
++    pm->user_free = user_free;
++    pm->option_tree_free = option_tree_free;
++    pm->neg_list_free = neg_list_free;
++
++    pm->patterns_capacity = INITIAL_PATTERN_ARRAY_ALLOC_SIZE;
++    pm->patterns = SnortAlloc(sizeof(HyperscanPattern) * pm->patterns_capacity);
++
++    return pm;
++}
++
++void HyperscanFree(HyperscanPm *pm) {
++    if (!pm) {
++        return;
++    }
++
++    unsigned int i = 0;
++    for (; i < pm->patterns_len; i++) {
++        HyperscanPattern *hp = &pm->patterns[i];
++        free(hp->pattern);
++        if (pm->user_free && hp->user_data) {
++            pm->user_free(hp->user_data);
++        }
++        if (pm->neg_list_free && hp->neg_list) {
++            pm->neg_list_free(&hp->neg_list);
++        }
++        if (pm->option_tree_free && hp->rule_option_tree) {
++            pm->option_tree_free(&hp->rule_option_tree);
++        }
++    }
++
++    hs_free_database(pm->db);
++    free(pm->patterns);
++    free(pm);
++}
++
++// Render the given literal as a hex-escaped pattern.
++static
++char *makeHex(const unsigned char *pat, unsigned patlen) {
++    size_t hexlen = patlen * 4;
++    char *hexbuf = SnortAlloc(hexlen + 1);
++    unsigned i;
++    char *buf;
++    for (i = 0, buf = hexbuf; i < patlen; i++, buf += 4) {
++        snprintf(buf, 5, "\\x%02x", (unsigned char)pat[i]);
++    }
++    hexbuf[hexlen] = '\0';
++    return hexbuf;
++}
++
++int HyperscanAddPattern(HyperscanPm *pm, unsigned char *pat, int patlen,
++                        int nocase, int offset, int depth, int negative,
++                        void *id, int iid) {
++    if (!pm) {
++        return -1;
++    }
++
++    // Reallocate patterns array if it's at capacity.
++    if (pm->patterns_len + 1 > pm->patterns_capacity) {
++        unsigned growth = pm->patterns_capacity / 2 > 0 ? pm->patterns_capacity / 2 : 1;
++        pm->patterns_capacity += growth;
++        HyperscanPattern *tmp = SnortAlloc(sizeof(HyperscanPattern) * pm->patterns_capacity);
++        memcpy(tmp, pm->patterns, sizeof(HyperscanPattern) * pm->patterns_len);
++        free(pm->patterns);
++        pm->patterns = tmp;
++    }
++
++    HyperscanPattern *hp = &pm->patterns[pm->patterns_len];
++    hp->user_data = id;
++    hp->pattern = makeHex(pat, patlen);
++    hp->pattern_len = patlen;
++    hp->nocase = nocase;
++    hp->offset = offset;
++    hp->depth = depth;
++    hp->negative = negative;
++    hp->id = iid;
++    hp->pattern_id = pm->patterns_len++;
++
++    return 0;
++}
++
++static
++int HyperscanBuild(HyperscanPm *pm) {
++    if (!pm) {
++        return -1;
++    }
++
++    // The Hyperscan compiler takes its patterns in a group of arrays.
++    const unsigned num_patterns = pm->patterns_len;
++    const char **patterns = SnortAlloc(num_patterns * sizeof(char *));
++    unsigned int *flags = SnortAlloc(num_patterns * sizeof(unsigned int));
++    unsigned int *ids = SnortAlloc(num_patterns * sizeof(unsigned int));
++    hs_expr_ext_t *exts = SnortAlloc(num_patterns * sizeof(hs_expr_ext_t));
++    const hs_expr_ext_t **ext =
++        SnortAlloc(num_patterns * sizeof(hs_expr_ext_t *));
++
++    unsigned int i = 0;
++    for (; i < num_patterns; i++) {
++        const HyperscanPattern *hp = &pm->patterns[i];
++        patterns[i] = hp->pattern;
++        flags[i] = HS_FLAG_SINGLEMATCH;
++        if (hp->nocase) {
++            flags[i] |= HS_FLAG_CASELESS;
++        }
++        ids[i] = i;
++        exts[i].flags = 0;
++        if (hp->offset != 0) {
++            exts[i].flags |= HS_EXT_FLAG_MIN_OFFSET;
++            exts[i].min_offset = hp->offset + hp->pattern_len;
++        }
++        if (hp->depth != 0) {
++            exts[i].flags |= HS_EXT_FLAG_MAX_OFFSET;
++            exts[i].max_offset = hp->offset + hp->depth;
++        }
++
++        ext[i] = &exts[i];
++    }
++
++    hs_compile_error_t *compile_error = NULL;
++    hs_error_t error = hs_compile_ext_multi(patterns, flags, ids, ext,
++                num_patterns, HS_MODE_BLOCK, NULL, &(pm->db), &compile_error);
++
++    free(patterns);
++    free(flags);
++    free(ids);
++    free(exts);
++    free(ext);
++
++    if (compile_error != NULL) {
++        FatalError("hs_compile_multi() failed: %s (expression: %d)\n",
++                   compile_error->message, compile_error->expression);
++        hs_free_compile_error(compile_error);
++        return -1;
++    }
++
++    if (error != HS_SUCCESS) {
++        FatalError("hs_compile_multi() failed: error %d\n", error);
++        return -1;
++    }
++
++    // Ensure the global Hyperscan scratch space has seen this database.
++    error = hs_alloc_scratch(pm->db, &hs_mpse_build_scratch);
++
++    if (error != HS_SUCCESS) {
++        FatalError("hs_alloc_scratch() failed: error %d\n", error);
++        return -1;
++    }
++
++    size_t scratch_size = 0;
++    error = hs_scratch_size(hs_mpse_build_scratch, &scratch_size);
++    if (error != HS_SUCCESS) {
++        FatalError("hs_scratch_size() failed: error %d\n", error);
++        return -1;
++    }
++
++    size_t db_size = 0;
++    error = hs_database_size(pm->db, &db_size);
++    if (error != HS_SUCCESS) {
++        FatalError("hs_database_size() failed: error %d\n", error);
++        return -1;
++    }
++
++    DEBUG_WRAP(DebugMessage(DEBUG_PATTERN_MATCH,
++                            "Built Hyperscan database: %u patterns, %zu bytes\n",
++                            num_patterns, db_size));
++
++    // Update summary info.
++    summary.db_count++;
++    summary.db_bytes += db_size;
++    summary.scratch_size = scratch_size;
++
++    return 0;
++}
++
++int HyperscanCompile(HyperscanPm *pm,
++                     int (*build_tree)(void *id, void **existing_tree),
++                     int (*neg_list_func)(void *id, void **list)) {
++    int rv = HyperscanBuild(pm);
++    if (rv < 0) {
++        return rv;
++    }
++
++    if (build_tree && neg_list_func) {
++        // Construct Snort's neg lists and option trees.
++        for (unsigned i = 0; i < pm->patterns_len; i++) {
++            HyperscanPattern *hp = &pm->patterns[i];
++            if (hp->negative) {
++                neg_list_func(hp->user_data, &hp->neg_list);
++            } else {
++                build_tree(hp->user_data, &hp->rule_option_tree);
++            }
++
++            build_tree(NULL, &hp->rule_option_tree);
++        }
++    }
++
++    return rv;
++}
++
++int HyperscanCompileWithSnortConf(struct _SnortConfig *sc, HyperscanPm *pm,
++                                  int (*build_tree)(struct _SnortConfig *,
++                                                    void *id,
++                                                    void **existing_tree),
++                                  int (*neg_list_func)(void *id, void **list)) {
++    int rv = HyperscanBuild(pm);
++    if (rv < 0) {
++        return rv;
++    }
++
++    if (build_tree && neg_list_func) {
++        // Construct Snort's neg lists and option trees.
++        for (unsigned i = 0; i < pm->patterns_len; i++) {
++            HyperscanPattern *hp = &pm->patterns[i];
++            if (hp->negative) {
++                neg_list_func(hp->user_data, &hp->neg_list);
++            } else {
++                build_tree(sc, hp->user_data, &hp->rule_option_tree);
++            }
++
++            build_tree(sc, NULL, &hp->rule_option_tree);
++        }
++    }
++
++    return rv;
++}
++
++// Context data used by Hyperscan match callback.
++typedef struct HyperscanCallbackContext_ {
++    const HyperscanPm *pm;
++    void *data;
++    int (*match)(void *id, void *tree, int index, void *data, void *neg_list);
++    int num_matches;
++} HyperscanCallbackContext;
++
++// Match callback, called by hs_scan for every match.
++static
++int onMatch(unsigned int id, unsigned long long from, unsigned long long to,
++            unsigned int flags, void *hs_ctx) {
++    HyperscanCallbackContext *ctx = hs_ctx;
++    const HyperscanPattern *hp = &ctx->pm->patterns[id];
++
++    ctx->num_matches++;
++
++    int index = (int)(to - hp->pattern_len);
++
++    if (ctx->match(hp->user_data, hp->rule_option_tree, index, ctx->data,
++                   hp->neg_list) > 0) {
++        return 1; // Halt matching.
++    }
++
++    return 0; // Continue matching.
++}
++
++int HyperscanSearch(HyperscanPm *pm, unsigned char *t, int tlen,
++                    int (*match)(void *id, void *tree, int index, void *data,
++                                 void *neg_list),
++                    void *data) {
++    HyperscanCallbackContext ctx;
++    ctx.pm = pm;
++    ctx.data = data;
++    ctx.match = match;
++    ctx.num_matches = 0;
++
++    hs_error_t error = hs_scan(pm->db, (const char *)t, tlen, 0,
++                               hs_mpse_scan_scratch, onMatch, &ctx);
++
++    if (error != HS_SUCCESS && error != HS_SCAN_TERMINATED) {
++        FatalError("hs_scan() failed: error %d\n", error);
++    }
++
++    return ctx.num_matches;
++}
++
++int HyperscanGetPatternCount(HyperscanPm *pm) {
++    if (!pm) {
++        return 0;
++    }
++    return pm->patterns_len;
++}
++
++void HyperscanPrintInfo(HyperscanPm *pm) {
++    size_t db_size = 0;
++    hs_database_size(pm->db, &db_size);
++
++    char *info = NULL;
++    hs_database_info(pm->db, &info);
++
++    unsigned int min_len = ~0U;
++    unsigned int max_len = 0;
++    unsigned int total_len = 0;
++    unsigned int nocase_count = 0;
++    unsigned int offset_count = 0;
++    unsigned int depth_count = 0;
++    unsigned int negative_count = 0;
++
++    unsigned int i;
++    for (i = 0; i < pm->patterns_len; i++) {
++        const HyperscanPattern *hp = &pm->patterns[i];
++        total_len += hp->pattern_len;
++        if (hp->pattern_len < min_len) {
++            min_len = hp->pattern_len;
++        }
++        if (hp->pattern_len > max_len) {
++            max_len = hp->pattern_len;
++        }
++        if (hp->nocase) {
++            nocase_count++;
++        }
++        if (hp->offset) {
++            offset_count++;
++        }
++        if (hp->depth) {
++            depth_count++;
++        }
++        if (hp->negative) {
++            negative_count++;
++        }
++    }
++
++    LogMessage("+--[Pattern Matcher:Hyperscan]--------------------------------\n");
++    LogMessage("| Number of patterns : %u\n", pm->patterns_len);
++    LogMessage("|    with nocase     : %u\n", nocase_count);
++    LogMessage("|    with offset     : %u\n", offset_count);
++    LogMessage("|    with depth      : %u\n", depth_count);
++    LogMessage("|    with negative   : %u\n", negative_count);
++    LogMessage("| Min pattern length : %u\n", min_len);
++    LogMessage("| Max pattern length : %u\n", max_len);
++    LogMessage("| Avg pattern length : %.2f\n", (float)total_len / pm->patterns_len);
++    LogMessage("|\n");
++    LogMessage("| Database size (KB) : %.2f\n", (float)db_size / 1024);
++    LogMessage("| Database info      : %s\n", info);
++    LogMessage("+-------------------------------------------------------------\n");
++
++    free(info);
++}
++
++void HyperscanPrintSummary() {
++    LogMessage("+--[ Intel Hyperscan Summary ]--------------------------------\n");
++    LogMessage("| Hyperscan version   : %s\n", hs_version());
++    LogMessage("| Number of databases : %u\n", summary.db_count);
++    LogMessage("| Memory (MB)         : %.2f\n", (float)summary.db_bytes / (1024 * 1024));
++    LogMessage("| Scratch (KB)        : %.2f\n", (float)summary.scratch_size / 1024);
++    LogMessage("+-------------------------------------------------------------\n");
++}
+diff --git a/src/sfutil/hyperscan.h b/src/sfutil/hyperscan.h
+new file mode 100644
+index 0000000..52cf51c
+--- /dev/null
++++ b/src/sfutil/hyperscan.h
+@@ -0,0 +1,92 @@
++/*
++** Copyright (c) 2015-2016, Intel Corporation.
++**
++** This program is free software; you can redistribute it and/or modify
++** it under the terms of the GNU General Public License Version 2 as
++** published by the Free Software Foundation.  You may not use, modify or
++** distribute this program under any other version of the GNU General
++** Public License.
++**
++** This program is distributed in the hope that it will be useful,
++** but WITHOUT ANY WARRANTY; without even the implied warranty of
++** MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++** GNU General Public License for more details.
++**
++** You should have received a copy of the GNU General Public License
++** along with this program; if not, write to the Free Software
++** Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
++*/
++
++
++#include <stdio.h>
++#include <stdlib.h>
++#include <string.h>
++
++#include <hs.h>
++
++#ifndef SNORT_HYPERSCAN_H
++#define SNORT_HYPERSCAN_H
++
++struct _SnortConfig;
++
++typedef struct _HyperscanPattern {
++    char *pattern;
++    unsigned int pattern_len;
++    unsigned int nocase;
++    unsigned int offset;
++    unsigned int depth;
++    unsigned int negative;
++    int id;                 /* pattern id passed in from mpse */
++    unsigned int pattern_id; /* actual pattern id */
++
++    void *user_data;
++    void *rule_option_tree;
++    void *neg_list;
++} HyperscanPattern;
++
++typedef struct _HyperscanPm {
++    hs_database_t *db;
++    HyperscanPattern *patterns;
++    unsigned int patterns_len; // number of elements
++    unsigned int patterns_capacity; // allocated capacity
++
++    void (*user_free)(void *);
++    void (*option_tree_free)(void **);
++    void (*neg_list_free)(void **);
++} HyperscanPm;
++
++/*
++ * Prototypes
++ */
++
++HyperscanPm *HyperscanNew(void (*userfree)(void *p),
++                          void (*optiontreefree)(void **p),
++                          void (*neg_list_free)(void **p));
++void HyperscanFree(HyperscanPm *pm);
++
++int HyperscanAddPattern(HyperscanPm *pm, unsigned char *pat, int patlen,
++                        int nocase, int offset, int depth, int negative,
++                        void *id, int iid);
++
++int HyperscanCompile(HyperscanPm *pp,
++                     int (*build_tree)(void *id, void **existing_tree),
++                     int (*neg_list_func)(void *id, void **list));
++
++int HyperscanCompileWithSnortConf(struct _SnortConfig *sc, HyperscanPm *pp,
++                                  int (*build_tree)(struct _SnortConfig *,
++                                                    void *id,
++                                                    void **existing_tree),
++                                  int (*neg_list_func)(void *id, void **list));
++
++int HyperscanSearch(HyperscanPm *pm, unsigned char *t, int tlen,
++                    int (*match)(void *id, void *tree, int index, void *data,
++                                 void *neg_list),
++                    void *data);
++
++int HyperscanGetPatternCount(HyperscanPm *pm);
++
++void HyperscanPrintInfo(HyperscanPm *pm);
++
++void HyperscanPrintSummary();
++
++#endif // SNORT_HYPERSCAN_H
+
+diff --git a/src/sfutil/hyperscan_common.c b/src/sfutil/hyperscan_common.c
+new file mode 100644
+index 0000000..31dc3d9
+--- /dev/null
++++ b/src/sfutil/hyperscan_common.c
+@@ -0,0 +1,59 @@
++/*
++** Copyright (c) 2017, Intel Corporation.
++**
++** This program is free software; you can redistribute it and/or modify
++** it under the terms of the GNU General Public License Version 2 as
++** published by the Free Software Foundation.  You may not use, modify or
++** distribute this program under any other version of the GNU General
++** Public License.
++**
++** This program is distributed in the hope that it will be useful,
++** but WITHOUT ANY WARRANTY; without even the implied warranty of
++** MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++** GNU General Public License for more details.
++**
++** You should have received a copy of the GNU General Public License
++** along with this program; if not, write to the Free Software
++** Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
++*/
++
++#include "hyperscan_common.h"
++
++hs_scratch_t *hs_mpse_build_scratch = NULL;
++hs_scratch_t *hs_mpse_scan_scratch = NULL;
++
++hs_scratch_t *hs_single_build_scratch = NULL;
++hs_scratch_t *hs_single_scan_scratch = NULL;
++
++hs_scratch_t *hs_pcre_build_scratch = NULL;
++hs_scratch_t *hs_pcre_scan_scratch = NULL;
++
++static void ActivateScratch(hs_scratch_t **build_scratch,
++                            hs_scratch_t **scan_scratch) {
++    hs_free_scratch(*scan_scratch);
++    *scan_scratch = *build_scratch;
++    *build_scratch = NULL;
++}
++
++void HyperscanActivate(void) {
++    ActivateScratch(&hs_mpse_build_scratch, &hs_mpse_scan_scratch);
++    ActivateScratch(&hs_single_build_scratch, &hs_single_scan_scratch);
++    ActivateScratch(&hs_pcre_build_scratch, &hs_pcre_scan_scratch);
++}
++
++void HyperscanFreeGlobalContext(void) {
++    hs_free_scratch(hs_mpse_build_scratch);
++    hs_mpse_build_scratch = NULL;
++    hs_free_scratch(hs_mpse_scan_scratch);
++    hs_mpse_scan_scratch = NULL;
++
++    hs_free_scratch(hs_single_build_scratch);
++    hs_single_build_scratch = NULL;
++    hs_free_scratch(hs_single_scan_scratch);
++    hs_single_scan_scratch = NULL;
++
++    hs_free_scratch(hs_pcre_build_scratch);
++    hs_pcre_build_scratch = NULL;
++    hs_free_scratch(hs_pcre_scan_scratch);
++    hs_pcre_scan_scratch = NULL;
++}
+diff --git a/src/sfutil/hyperscan_common.h b/src/sfutil/hyperscan_common.h
+new file mode 100644
+index 0000000..ec731d9
+--- /dev/null
++++ b/src/sfutil/hyperscan_common.h
+@@ -0,0 +1,40 @@
++/*
++** Copyright (c) 2017, Intel Corporation.
++**
++** This program is free software; you can redistribute it and/or modify
++** it under the terms of the GNU General Public License Version 2 as
++** published by the Free Software Foundation.  You may not use, modify or
++** distribute this program under any other version of the GNU General
++** Public License.
++**
++** This program is distributed in the hope that it will be useful,
++** but WITHOUT ANY WARRANTY; without even the implied warranty of
++** MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++** GNU General Public License for more details.
++**
++** You should have received a copy of the GNU General Public License
++** along with this program; if not, write to the Free Software
++** Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
++*/
++
++#ifndef SNORT_HYPERSCAN_COMMON_H
++#define SNORT_HYPERSCAN_COMMON_H
++
++#include <hs.h>
++
++// Scratch space for Hyperscan MPSE matcher.
++hs_scratch_t *hs_mpse_build_scratch;
++hs_scratch_t *hs_mpse_scan_scratch;
++
++// Scratch space for Hyperscan sp_pattern_match (single) matcher.
++hs_scratch_t *hs_single_build_scratch;
++hs_scratch_t *hs_single_scan_scratch;
++
++// Scratch space for Hyperscan PCRE prefilter.
++hs_scratch_t *hs_pcre_build_scratch;
++hs_scratch_t *hs_pcre_scan_scratch;
++
++void HyperscanActivate(void);
++void HyperscanFreeGlobalContext(void);
++
++#endif // SNORT_HYPERSCAN_COMMON_H
+
