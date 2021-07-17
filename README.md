@@ -17,3 +17,7 @@ Using [topic materials](https://forums.gentoo.org/viewtopic-p-7807070.html#78070
     cannot open mixer: Operation not permitted
 
 Some notes about configuration can be found [here](https://forums.gentoo.org/viewtopic-p-7236424.html?sid=a4c096766ec5366fb4f3fa775c355027#7236424).
+
+#### x11-libs/fltk
+
+Using ABI 10305 (1.3.5)
