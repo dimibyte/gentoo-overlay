@@ -1,5 +1,5 @@
 # Dimibyte's Gentoo Overlay
-
+![GitHub repo size in bytes](https://img.shields.io/github/repo-size/dimibyte/gentoo-overlay.svg)
 ### How to add the overlay
 As a superuser, add to /etc/portage/repos.conf/gentoo.conf the following:
 
